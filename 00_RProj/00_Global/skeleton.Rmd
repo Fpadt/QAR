@@ -1,0 +1,85 @@
+---
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)  
+
+# <Defect>
+# <Table01>
+# <SheetName>
+# <WorkBookName>
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='asis'}
+
+source('iSynGeneral.R')
+
+fEcho    <- FALSE
+fEval    <- TRUE
+fCache   <- FALSE
+fResults <- 'asis'
+
+parSYST  <- "BA1"
+parCLNT  <- "200"
+shtName  <- "<SheetName>"
+wbResult <- "<Defect>"
+
+#file.remove(dir("./results", full.names = TRUE))
+fileXL <- paste0("./results/", wbResult, ".xlsx")
+file.remove(fileXL)
+
+```  
+
+```{r ReadingData, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
+# Analysis:
+
+dt<Table01> <- fGetTable(pTable = <Table01>,, pSystID= parSYST, pClient= parCLNT ) 
+
+```
+
+```{r CreateDataSet, echo=fEcho, eval= fEval, cache = fCache, results='hide'}
+```
+
+```{r Analysis01, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
+```
+
+# Quality Assurance Check
+A check is performed whether 
+The following `r nrow(dtANA01)` 
+
+# Impact
+
+# Analysis
+There are `r nrow(dtANA03)`
+
+- System and Client: `r parSYST parCLNT`
+- Table(s) analyzed: <Table01>  
+- Number of records: `r attr(dt<Table01>, "RecordsExtracted")`  
+- Extracted on     : `r attr(dt<Table01>, "RefreshDate")`  
+
+```{r Overview, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+```
+
+# Solution Direction
+1. 
+2. 
+
+# Defects
+
+# Example(s)
+
+The total list can be found below and in the excel file (*`r wbResult `*):
+
+```{r WriteResults, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+
+fWriteToSheet(dtANA01, wbResult, "<SheetName>" )
+
+dtANA01
+```

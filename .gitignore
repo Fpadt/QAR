@@ -88,16 +88,17 @@ sympy-plots-for-*.tex/
 # xindy
 *.xdy
 .Rproj.user
-# Knitr cache
-00_RProj/05_Markdown/cache/
-# GV Project
-GV.Rproj
+
+# QAR Project
+*.xlsx
+*.pdf
+QAR.Rproj
 # R History
 .Rhistory
 # RData
 .RData
-# Data File, as these go by oneDrive
+# Data File
 10_RawData
 11_PrepData
-# Frame Pictures for Shiny
-00_RProj/40_Shiny/Pictures
+# Defect Screenshots
+80_Screenshots

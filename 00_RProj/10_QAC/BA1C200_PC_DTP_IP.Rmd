@@ -1,4 +1,7 @@
 ---
+title: "Info Package, Data Transfer Process, Process Chain"
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
 output: 
    pdf_document:
     toc:             true
@@ -62,21 +65,24 @@ dtANA01 <- dtDS02[is.na(CHAIN_ID) &
 
 ```
 
-# Defect: <Defect>
-The following `r nrow(dtANA01)` Text DTP's seem not to be in any Process Chain. 
-It looks like these were manually triggered as a one-off. 
+# DTP to Process Chain assignment
+
+## Quality Assurance Check
+A check is performed whether all DTPs are assigned to a Process Chain.   
+The following `r nrow(dtANA01)` Text DTP's seem not to be assigned to any Process Chain. 
 
 ## Impact
-Executing a DTP only once will not capture any changes after the DTP was executed.
+In order to schedule the execution of a DTP it needs to be assigned to a Process Chain.  
+A DTP can be executed manually.
 
 ## Analysis
+There are `r nrow(dtANA01)` DTPs not assigned to a process chain.
 
 - System and Client: `r parSYST` and `r parCLNT`
 - Number of records: `r attr(dtRSBKDTP, "RecordsExtracted")`  
 - Extracted on     : `r attr(dtRSBKDTP, "RefreshDate")`  
 
-```{r Results02, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
-head(dtANA01)
+```{r Overview01, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
 ```
 
 ## Solution Direction
@@ -84,7 +90,9 @@ head(dtANA01)
 2. Transport the process Chain to BA1
 3. Check the scheduling of the process Chain
 
-## Details
+## Defects
+
+## Example(s)
 
 The total list can be found below and in the excel file (*`r wbResult `*):
 
@@ -108,18 +116,27 @@ dtANA02 <- dtDS02[TGTTP == "IOBJT" &
 ```
 
 
-# Defect
+# Text DTP as 'delta' Load 
 
+## Quality Assurance Check
+As [best practice](https://projects.gvshare.com/iSynergy/01_Release_1/06._Reporting/02._Design/03._Deliverables/) the text data loads will be full loads instead of delta. 
 The following `r nrow(dtANA02)` Text DTP's seem to be delta loads instead of
-full load and not to be in any Process Chain. According to the design document 
-all text DTPs and IPs should be Full Loads
-It looks like these were manually triggered as a one-off. 
+full load. 
 
 ## Impact
 Additional Monitoring required
 
+## Analysis
+There are `r nrow(dtANA02)` Text DTPs set on delta instead of full.
+
+```{r Overview02, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+```
+
 ## Solution Direction
 1. Put the DTP's on Full Load in BD1 and Transport
+2. remove the delta queue in ECC
+
+## Defect(s)
 
 ## Example(s)
 
@@ -141,20 +158,30 @@ dtANA03  <- dtDS02[ , DTPDUP:= duplicated(dtDS02, by = c("DTP"))]
 dtANA03  <- dtANA03[, D002 := sum(DTPDUP), 
                     by = c("DTP")]
 dtANA03  <- dtANA03[D002>0, .(DTP, TGT, CHAIN_ID)]
-dtANA03 
+
 ```
 
 
-# Defect
+# DTP double Process Chain assignment
 
-The following `r nrow(dtANA03)` DTP's are twice in a process chain. This may result
-in a loading error due to locking. Please check and revise.
+## Quality Assurance Check
+A check is performed whether DTPs are assigned twice to a process chain.
 
 ## Impact
+This may result in a loading error due to locking. 
 Additional Monitoring and fixing required
+
+## Analysis
+There are `r nrow(dtANA03)` DTP's assigned twice in a process chain. 
+
+```{r Overview03, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+
+```
 
 ## Solution Direction
 1. Put the DTP's only in 1 Process chain
+
+## Defects
 
 ## Example(s)
 
