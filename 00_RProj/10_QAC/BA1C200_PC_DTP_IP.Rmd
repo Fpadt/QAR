@@ -1,0 +1,167 @@
+---
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)  
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='asis'}
+
+source('~/RW/QAR/00_RProj/00_Global/iSynGeneral.R')
+
+fEcho    <- FALSE
+fEval    <- TRUE
+fCache   <- FALSE
+fResults <- 'asis'
+
+parSYST  <- "BA1"
+parCLNT  <- "200"
+parSRC   <- "RA1CLNT250" 
+shtName  <- "TXT_NOT_IN_PC"
+wbResult <- "BA1C00_PC_DTP_IP"
+
+#file.remove(dir("./results", full.names = TRUE))
+#wbResult <- paste0("./results/", wbResult, ".xlsx")
+#file.remove(wbResult)
+
+```  
+
+```{r ReadingData, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
+dtRSBKDTP     <- fGetTable(pTable = "RSBKDTP", pKey = "DTP", 
+                           pSystID= parSYST, pClient= parCLNT)
+dtRSBKDTPSTAT <- fGetTable(pTable = "RSBKDTPSTAT", "DTP", 
+                           pSystID= parSYST, pClient= parCLNT)
+dtRSPCCHAIN   <- fGetTable(pTable = "RSPCCHAIN", "CHAIN_ID", 
+                           pSystID= parSYST, pClient= parCLNT)
+
+```
+
+```{r CreateDataSet, echo=fEcho, eval= fEval, cache = fCache, results='hide'}
+dtDS00 <- copy(dtRSPCCHAIN) 
+dtDS00 <- dtDS00[, DTP:= VARIANTE]
+
+dtDS01 <- merge(dtRSBKDTP, dtRSBKDTPSTAT, all.x = TRUE, by = c("SYSTID", "DTP"))
+dtDS02 <- merge(dtDS01   , dtDS00       , all.x = TRUE, by = c("SYSTID", "DTP"))
+```
+
+```{r Analysis01, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
+# no process chain assigned
+
+dtANA01 <- dtDS02[is.na(CHAIN_ID) &
+                    TGTTP == "IOBJT" &
+                    grepl("RA1CLNT250", x = SRC) &
+                    UPDMODE != "I", 
+                  .(DTP, TGT)]
+
+```
+
+# Defect: <Defect>
+The following `r nrow(dtANA01)` Text DTP's seem not to be in any Process Chain. 
+It looks like these were manually triggered as a one-off. 
+
+## Impact
+Executing a DTP only once will not capture any changes after the DTP was executed.
+
+## Analysis
+
+- System and Client: `r parSYST` and `r parCLNT`
+- Number of records: `r attr(dtRSBKDTP, "RecordsExtracted")`  
+- Extracted on     : `r attr(dtRSBKDTP, "RefreshDate")`  
+
+```{r Results02, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+head(dtANA01)
+```
+
+## Solution Direction
+1. Add these DTP in the respective process chain in BD1
+2. Transport the process Chain to BA1
+3. Check the scheduling of the process Chain
+
+## Details
+
+The total list can be found below and in the excel file (*`r wbResult `*):
+
+```{r WriteResults01, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+fWriteToSheet(dtANA01, wbResult, shtName, pAppend = FALSE)
+
+dtANA01
+```
+
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)  
+
+```{r Analysis02, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
+shtName  <- "TEXT_ON_DELTA"
+
+dtANA02 <- dtDS02[TGTTP == "IOBJT" &
+                    grepl(parSRC, x = SRC) &
+                    UPDMODE == "D", 
+                  .(DTP, TGT, UPDMODE, CHAIN_ID )]
+```
+
+
+# Defect
+
+The following `r nrow(dtANA02)` Text DTP's seem to be delta loads instead of
+full load and not to be in any Process Chain. According to the design document 
+all text DTPs and IPs should be Full Loads
+It looks like these were manually triggered as a one-off. 
+
+## Impact
+Additional Monitoring required
+
+## Solution Direction
+1. Put the DTP's on Full Load in BD1 and Transport
+
+## Example(s)
+
+The total list can be found below and in the excel file (*`r wbResult `*) 
+sheet (*`r shtName `*):
+```{r WriteResults02, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+fWriteToSheet(dtANA02, wbResult, shtName, pAppend = TRUE )
+
+dtANA02
+```
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)  
+
+```{r Analysis03, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
+shtName  <- "DTP_TWICE_IN_DTP"
+
+dtANA03  <- dtDS02[ , DTPDUP:= duplicated(dtDS02, by = c("DTP"))]
+dtANA03  <- dtANA03[, D002 := sum(DTPDUP), 
+                    by = c("DTP")]
+dtANA03  <- dtANA03[D002>0, .(DTP, TGT, CHAIN_ID)]
+dtANA03 
+```
+
+
+# Defect
+
+The following `r nrow(dtANA03)` DTP's are twice in a process chain. This may result
+in a loading error due to locking. Please check and revise.
+
+## Impact
+Additional Monitoring and fixing required
+
+## Solution Direction
+1. Put the DTP's only in 1 Process chain
+
+## Example(s)
+
+The total list can be found below and in the excel file (*`r wbResult `*) 
+sheet (*`r shtName `*):
+```{r WriteResults03, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+fWriteToSheet(dtANA03, wbResult, shtName, pAppend = TRUE )
+
+dtANA03
+```
