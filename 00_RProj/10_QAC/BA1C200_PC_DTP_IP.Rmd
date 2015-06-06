@@ -15,7 +15,13 @@ output:
 \newpage
 ![Logo](http://www.grandvision.com/img/logoGV.png)  
 
-```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='asis'}
+```{r toDo, , echo=FALSE, eval=FALSE, cache=FALSE, results='hide' }
+# mcrIOBJ_TABLES_COUNT
+
+```
+
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
 
 source('~/RW/QAR/00_RProj/00_Global/iSynGeneral.R')
 
@@ -37,22 +43,183 @@ wbResult <- "BA1C00_PC_DTP_IP"
 ```  
 
 ```{r ReadingData, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
-dtRSBKDTP     <- fGetTable(pTable = "RSBKDTP", pKey = "DTP", 
-                           pSystID= parSYST, pClient= parCLNT)
-dtRSBKDTPSTAT <- fGetTable(pTable = "RSBKDTPSTAT", "DTP", 
-                           pSystID= parSYST, pClient= parCLNT)
-dtRSPCCHAIN   <- fGetTable(pTable = "RSPCCHAIN", "CHAIN_ID", 
-                           pSystID= parSYST, pClient= parCLNT)
+dtzsDD02_ANA  <- fGetTable(pTable  = "zsDD02_ANA", pKey = "TABNAME")
+dtzsDD02_ANA  <- dtzsDD02_ANA[ANALYSIS == "BA1C200_RSDCHA_RECORDCOUNT" &
+                              SYSTEMID == parSYST &
+                              CLIENT   == parCLNT,
+                              .(ANALYSIS, TABNAME)]
+dtzsDD02_SLCT <- fGetTable(pTable  = "zsDD02_SLCT", pKey = "TABNAME")
+dtzsDD02_SLCT <- dtzsDD02_SLCT[SYSTEMID == parSYST &
+                               CLIENT   == parCLNT,
+                               .(TABNAME, TABTXT, START, RECORDCOUNT, TYPE)]
+dtRSDCHABAS   <- fGetTable(pTable  = "RSDCHABAS", pKey = "CHABASNM", 
+                           pSystID = parSYST, pClient= parCLNT)
+dtTABTYPE     <- fGetTable(pTable  = "tblTABTYPE", pKey = "TABTYPE")
+
+dtRSBKDTP     <- fGetTable(pTable  = "RSBKDTP", pKey = "DTP", 
+                           pSystID = parSYST, pClient= parCLNT)
+dtRSBKDTPSTAT <- fGetTable(pTable  = "RSBKDTPSTAT", "DTP", 
+                           pSystID = parSYST, pClient= parCLNT)
+dtRSPCCHAIN   <- fGetTable(pTable  = "RSPCCHAIN", "CHAIN_ID", 
+                           pSystID = parSYST, pClient= parCLNT)
 
 ```
 
 ```{r CreateDataSet, echo=fEcho, eval= fEval, cache = fCache, results='hide'}
-dtDS00 <- copy(dtRSPCCHAIN) 
-dtDS00 <- dtDS00[, DTP:= VARIANTE]
+dtzsDD02 <- merge(dtzsDD02_SLCT, dtzsDD02_ANA,  
+                  by = c("TABNAME"))
+dtRSDCHABAS_01 <- copy(dtRSDCHABAS)
+dtRSDCHABAS_01 <- dtRSDCHABAS_01[, `:=`(
+  OWNER  = ifelse(substr(CHABASNM, 1, 1) == "0",
+                 "SAP", "CUST"),
+  PREFIX = ifelse(substr(CHABASNM, 1, 1) == "0",
+                 "/BI0/", "/BIC/"),
+  CHABAS = ifelse(substr(CHABASNM, 1, 1) == "0",
+                 substr(CHABASNM, 2, nchar(CHABASNM)), 
+                 CHABASNM))]
+dtIOBJTAB <-  as.data.table(
+  expand.grid(CHABASNM = dtRSDCHABAS_01$CHABASNM, 
+              TABTYPE = dtTABTYPE$TABTYPE,
+              stringsAsFactors = FALSE  ))
+setkey(dtIOBJTAB, "CHABASNM")
 
-dtDS01 <- merge(dtRSBKDTP, dtRSBKDTPSTAT, all.x = TRUE, by = c("SYSTID", "DTP"))
-dtDS02 <- merge(dtDS01   , dtDS00       , all.x = TRUE, by = c("SYSTID", "DTP"))
+dtIOBJTAB <- merge(dtIOBJTAB, 
+                   dtRSDCHABAS_01[, .(CHABASNM, OWNER, PREFIX, CHABAS)],
+                   all.x = TRUE, by = c("CHABASNM"))
+dtIOBJTAB <- dtIOBJTAB[, TABNAME:= paste0(PREFIX, TABTYPE, CHABAS)]
+dtIOBJTAB <- merge(dtIOBJTAB, 
+                   dtzsDD02[, .(TABNAME, RECORDCOUNT)],
+                   all.x = TRUE, by = c("TABNAME"))
+setkey(dtIOBJTAB, "CHABASNM")
+
+# Identify iSynergy Info Objects and non-iSynergy
+dtRSDCHABAS_01 <- merge(dtRSDCHABAS_01, 
+                        dtIOBJTAB[TABTYPE == "S" & RECORDCOUNT > 1,
+                                  .(CHABASNM, RECORDCOUNT)],
+                        all.x = TRUE, by = c("CHABASNM"))
+dtIOBJ_iSYN <- dtRSDCHABAS_01[!is.na(RECORDCOUNT)]
+
+# Info Objects per Flag
+dtIOBJ_iSYNA <- merge(dtIOBJ_iSYN[!is.na(ATTRIBFL), 
+                                  .(CHABASNM, CHATP)],
+                      dtIOBJTAB[TABTYPE %in% c("S","P","X","Q","Y")],
+                      all.x = TRUE, by = c("CHABASNM"))
+dtIOBJ_iSYNA <- dtIOBJ_iSYNA[, INUSE:= ifelse(RECORDCOUNT > 1, 1,0)]
+
+dtIOBJ_iSYNT <- dtIOBJ_iSYN[!is.na(TXTTABFL)]
+dtIOBJ_iSYNH <- dtIOBJ_iSYN[!is.na(HIETABFL)]
+
+# Split BCT and Custom
+dtIOBJ_iSYN0 <- dtIOBJ_iSYN[OWNER=="SAP"]
+dtIOBJ_iSYNC <- dtIOBJ_iSYN[OWNER!="SAP"]
+
+dtDS00   <- copy(dtRSPCCHAIN) 
+dtDS00   <- dtDS00[, DTP:= VARIANTE]
+
+dtDS01   <- merge(dtRSBKDTP, dtRSBKDTPSTAT, all.x = TRUE, 
+                  by = c("SYSTID", "DTP"))
+dtDS02   <- merge(dtDS01   , dtDS00       , all.x = TRUE, 
+                  by = c("SYSTID", "DTP"))
 ```
+
+
+```{r IOBJCOUNT, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
+# Count of records in IOBJ Tables
+
+
+```
+
+# Info Object Record Count 
+
+## Quality Assurance Check
+In the system `r paste(parSYST, parCLNT, sep="C") ` `r nrow(dtRSDCHABAS)` Info Objects are activated.  
+Although these Info Objects are activated this doesn't mean they are used by isynergy, e.g. Info Objects activated by the SAP Business Content.  
+
+### Info Objects in use by iSynergy
+In order to identify the iSynergy Info Objects the records in the respective Info Objects SID table are counted. In case the SID table has more than 1 record the Info Object is classified as active for iSynergy.  
+*Note: there is always 1 blank record in an activated Info Object*.
+
+From the `r nrow(dtRSDCHABAS)` Info Objects there are `r nrow(dtIOBJ_iSYN)` iSynergy Info Objects identified as being in-use by iSynergy, being `r 100 * round(nrow(dtIOBJ_iSYN)/nrow(dtRSDCHABAS), 1)`%. These will be analyzed further.  
+The other `r nrow(dtRSDCHABAS)-nrow(dtIOBJ_iSYN)` Info Objects are active but non-iSynergy objects so not in use and will be excluded from any further analysis.
+
+### Master Data Attributes
+
+
+An Info Object can have Master Data Attributes if the respective flag has been set.  
+Only if this flag is set the related tables are existing, being P, X, Q and Y. 
+
+From the remaining `r nrow(dtIOBJ_iSYN)` Info Objects `r nrow(dtIOBJ_iSYNA[TABTYPE == "S"])` 
+Info Objects have the Master Data Attribute flag set. 
+
+These objects can be split in standard SAP Info Objects and iSynergy specific Objects.  
+In case that the flag is set for  
+* a standard SAP Object and there is no data in the respective tables then this means that the data flow is incomplete and needs to be checked, e.g DTP/IP not in process chain or data source not activated.  
+* a custom Info Object it could be that the Flag was set incorrectly or the data flow is incomplete.  
+
+```{r TABLE_MDA, echo=fEcho, eval= fEval, cache = fCache, results=fResults}
+dcast(
+  dtIOBJ_iSYNA[, .(LOADED = sum(INUSE)), by=.(OWNER, TABTYPE)], 
+  OWNER ~ TABTYPE, 
+  value.var = "LOADED")[ , c("OWNER", "S", "P", "X", "Q", "Y") ]
+
+dtIOBJ_iSYNAD <- dcast(
+  dtIOBJ_iSYNA, 
+  CHABASNM + CHATP ~ TABTYPE, 
+  value.var = "RECORDCOUNT")[order(dtIOBJ_iSYNAD$CHATP), 
+                             c("CHATP", "CHABASNM", "S", "P", "X", "Q", "Y")]
+dtIOBJ_iSYNAD$CHK_SP <- dtIOBJ_iSYNAD$S == dtIOBJ_iSYNAD$P 
+dtIOBJ_iSYNAD <- dtIOBJ_iSYNAD[order(dtIOBJ_iSYNAD$CHATP), ]
+  
+head(dtIOBJ_iSYNAD)
+```
+
+
+```{r PIE_SAP_Cust, echo=fEcho, eval= FALSE, cache = fCache, results='hide'}
+
+#ggplot(dtIOBJ_iSYN, aes(x = 'Custom versus SAP', fill=OWNER)) + geom_bar() + 
+#coord_flip()
+
+```
+
+
+
+## Impact
+
+
+## Analysis
+
+- System and Client: `r parSYST` and `r parCLNT`
+- Number of records: `r attr(dtRSBKDTP, "RecordsExtracted")`  
+- Extracted on     : `r attr(dtRSBKDTP, "RefreshDate")`  
+
+```{r Overview01, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+```
+
+## Solution Direction
+1. 
+2. 
+3. 
+
+## Defects
+
+## Example(s)
+
+The total list can be found below and in the excel file (*`r wbResult `*):
+
+```{r WriteResultsIOBJ, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
+fWriteToSheet(dtRSDCHABAS  , wbResult, "ACTIVE_IOBJ"   , pAppend = FALSE)
+fWriteToSheet(dtIOBJ_iSYN  , wbResult, "iSYN_IOBJ"     , pAppend = TRUE)
+fWriteToSheet(dtIOBJ_iSYNAD, wbResult, "MD_ATTR"       , pAppend = TRUE)
+fWriteToSheet(dtIOBJ_iSYN[, .(CHABASNM, OWNER, RECORDCOUNT)], 
+              wbResult, "iSynergy_IOBJ", pAppend = TRUE)
+
+head(dtIOBJ_iSYN[, .(CHABASNM, OWNER, RECORDCOUNT)])
+```
+
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)  
+
 
 ```{r Analysis01, echo=fEcho, eval=fEval, cache=fCache, results='hide'}
 # no process chain assigned
@@ -97,7 +264,7 @@ There are `r nrow(dtANA01)` DTPs not assigned to a process chain.
 The total list can be found below and in the excel file (*`r wbResult `*):
 
 ```{r WriteResults01, echo=fEcho, eval=fEval, cache=fCache, results=fResults}
-fWriteToSheet(dtANA01, wbResult, shtName, pAppend = FALSE)
+fWriteToSheet(dtANA01, wbResult, shtName, pAppend = TRUE)
 
 dtANA01
 ```
