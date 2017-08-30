@@ -1,0 +1,728 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Config Check"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    toc: no
+    toc_depth: 4
+classoption: landscape
+---
+
+```{r setup, echo=FALSE, results= "hide"}
+
+ knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	image = TRUE,
+	results = "hide")
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+
+# folder locations
+RW   <- file.path("C:", "Users", "fpadt", "Documents", "RW")
+PRJ  <- file.path(RW , "QAR")
+MOD  <- file.path(PRJ, "05_modules")
+DAT  <- file.path(PRJ, "11_PrepData")
+RES  <- file.path(PRJ, "60_Results")
+FIG  <- file.path(PRJ, "70_Figures")
+
+# Load functions
+# source(file.path(RW, "pythia", "00_RProj", "GenericFunctions.R"))
+# source(file.path(RW , "pythia", "config",                       "PATHS.R"))
+# source(file.path(RW , "pythia", "SharedFunctions",              "GenericFunctions.R"))
+invisible(source(file.path(RW , "QAR"   , "00_RProj"       , "00_Global", "iSynGeneral.R")))
+# source(file.path(PRJ, "config", "PATHS.R"))
+# source(file.path(MOD, "Initialization_functions.R"))
+# source(file.path(MOD, "Visualization_functions.R"))
+
+
+# SAP systems to use
+# pECC_SYST <- "RP1"
+# pECC_CLNT <- "300"
+# pBI_SYST  <- "BP1"
+# pBI_CLNT  <- "300"
+# pLGCINDC  <- "C"
+
+systord  <- c("BD1", "BA1", "BP1", "BTP", "BU1")
+newfiles <- TRUE
+
+# set_theme()
+
+# Data Settings
+pWSHT     <- FALSE
+pROWS     <- -1L
+pSMALL    <- 1000
+pEXMP     <- 50 
+pEXP      <- FALSE
+pPATH     <- RES
+pXLSX     <- paste0("RSPC") 
+
+# Open Excel for storing results
+if (file.exists(paste0(pPATH, "/", pXLSX, ".xlsx")) == TRUE) {
+    file.remove(paste0(pPATH, "/", pXLSX, ".xlsx"))
+}
+
+dtPATH <- 
+    data.table(
+      DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
+      PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
+    )
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtPATH, 
+    pPATH, pXLSX, "PATHS", pAppend = FALSE )}
+
+gvLOGO_PATH <- file.path(PRJ, "70_Figures", "GV_LOGO.png") 
+if (!file.exists(gvLOGO_PATH)) {
+  download.file(url      = "http://www.grandvision.com/img/logoGV.png",
+                destfile = gvLOGO_PATH,
+                mode     = 'wb')
+  }
+knitr::include_graphics(gvLOGO_PATH)
+
+if (newfiles == TRUE) {
+  read_and_union <- function(pTableName){
+    lSYSTID <- list("BD1100", "BTP300", "BA1300", "BP1300", "BU1300")
+    
+    dtReturn <- 
+      do.call(
+        rbind,
+        lapply(lSYSTID, function(x) {
+          fGetEXPTable(
+            pTableName = pTableName,
+            pSystID = substr(x, 1, 3),
+            pClient = substr(x, 4, 6)
+          )
+        }))
+    
+    return(dtReturn)
+  }
+  
+  dtRSPCLOGCHAIN  <- read_and_union("RSPCLOGCHAIN")
+  dtRSPCLOGCHAIN[, DATUM := ymd(DATUM)]
+  
+  dtRSPCCHAIN     <- read_and_union("RSPCCHAIN")
+  dtRSPCCHAINT    <- read_and_union("RSPCCHAINT")
+  dtRSPCCHAINATTR <- read_and_union("RSPCCHAINATTR")
+  dtRSPCTRIGGER   <- read_and_union("RSPCTRIGGER")
+  
+  write.fst(x = dtRSPCLOGCHAIN , path = file.path(DAT, "dtRSPCLOGCHAIN.fst"))
+  write.fst(x = dtRSPCCHAIN    , path = file.path(DAT, "dtRSPCCHAIN.fst"))
+  write.fst(x = dtRSPCCHAINT   , path = file.path(DAT, "dtRSPCCHAINT.fst"))
+  write.fst(x = dtRSPCCHAINATTR, path = file.path(DAT, "dtRSPCCHAINATTR.fst"))
+  write.fst(x = dtRSPCTRIGGER  , path = file.path(DAT, "dtRSPCTRIGGER.fst"))
+  
+} else {
+  dtRSPCLOGCHAIN <- 
+    read.fst(path = file.path(DAT, "dtRSPCLOGCHAIN.fst"), 
+             as.data.table = TRUE)
+  dtRSPCCHAIN <- 
+    read.fst(path = file.path(DAT, "dtRSPCCHAIN.fst"),
+             as.data.table = TRUE)
+  dtRSPCCHAINT <- 
+    read.fst(path = file.path(DAT, "dtRSPCCHAINT.fst"),
+                           as.data.table = TRUE)
+  dtRSPCCHAINATTR <- 
+    read.fst(path = file.path(DAT, "dtRSPCCHAINATTR.fst"), 
+             as.data.table = TRUE)
+  dtRSPCTRIGGER <- 
+    read.fst(path = file.path(DAT, "dtRSPCTRIGGER.fst"), 
+             as.data.table = TRUE)  
+}
+```
+
+# Process Chains
+
+This chapter focusses on the BI process chains and is structured in the 
+following sections.
+
+**Guide Lines:**  
+First the general guidlines are given which apply to all process chains. 
+In case a process chain deviates from these guide lines the reason must be 
+documented. 
+
+This paragraph contains an overview of all exisitng Process Chains per system.
+
+**Configuration:**  
+Next the configration of the Process Chains and alignment 
+over the systems is discussed. 
+
+**Loading:**  
+Finally, the scheduling of the process chains is shown and discussed.
+In general all process chains should be scheduled in all systems with the same 
+frequency.  
+
+Reasons to deviate from this need to be documented, e.g. 
+
+- Local Chains are not scheduled in the project street  
+- process chains in the project street might run at a higher frequency.  
+
+This section will be split in several paragraphs regarding the status of the
+Process chains:  
+
+1. **live** and released in production (BP1).  
+2. *not* **live** but are released in the Test/UAT system.  
+3. *not* **live** and *not* released.  
+
+\newpage
+
+## General Guide Lines
+
+Process Chains:  
+1. are identical in all systems  
+2. are scheduled at the same frequency in all systems  
+3. have development class ZBI  
+
+### Overview
+The table below shows the number of process chains per system.  
+
+This number can deviate in case new developments or deletions are not 
+transported through the landscape. In case of deviations the open transport 
+needs to be mentioned else the process chain will be flagged for deletion. 
+
+Process Chains with development class **$TMP** will be deleted at the due date
+given by the developer.  
+Without a due data a $TMP process chain may be deleted instantaneously.
+
+
+```{r transform_rspc_syst_01}
+# determine Main Chains in all systems and count over all systems
+dtRSPCMAIN <- 
+  dtRSPCCHAIN[TYPE == "CHAIN", .(SYSTID, VARIANTE, TYPE)][
+  dtRSPCCHAIN[TYPE == "TRIGGER", .(SYSTID, CHAIN_ID)],
+    on = .(SYSTID, VARIANTE == CHAIN_ID)]                  %>%
+  .[, MAIN := ifelse(is.na(TYPE), 1, 0)]                   %>%
+  .[, `:=`(CHAIN_ID = VARIANTE,
+           VARIANTE = NULL,
+           TYPE     = NULL)]                               %>%
+  unique()                                                 %>%
+  .[, CNT := .N, by = .(CHAIN_ID)]                         %T>%
+  setkey(CHAIN_ID)
+
+dtRSPC_SYST <- 
+  dtRSPCCHAINATTR[, TOT := .N, 
+                  by = .(CHAIN_ID)]           %>%
+  dcast.data.table(
+    data          = ., 
+    formula       = CHAIN_ID + TOT ~ SYSTID,
+    fun.aggregate = length,  
+    value.var     = "CHAIN_ID"
+  )                                           %T>%
+  setcolorder(c("CHAIN_ID", "TOT", systord))  %T>%
+  setorder(TOT, CHAIN_ID)
+
+dtTMP01 <- 
+  dcast.data.table(
+    data = dtRSPCMAIN[, .N, 
+                      by = .(SYSTID, MAIN)],
+    formula = SYSTID ~ MAIN,
+    fun.aggregate = sum,
+    value.var = "N")                          %T>%
+  setnames(c("0","1"), c("All","Main"))
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtRSPC_SYST, 
+    pPATH, pXLSX, "RSPC_SYST", pAppend = TRUE )}
+
+```
+
+```{r describe_RSPC_main_per_system, results='asis', }
+kable(
+  x = dtTMP01, 
+  align = 'l',
+  caption = "Number of Main Process Chains per System")
+
+```
+
+\newpage
+
+## Configuration
+
+This paragraph focusses on the configuration of the process chains
+
+### Alignment
+The following Process Chains are not in **ALL** systems! This list should be 
+empty, currently it has `r nrow(dtRSPC_SYST[TOT < 5])` entries.  
+
+The process chains do not have to be scheduled but the configuration 
+needs to be aligned over all systems.
+
+```{r describe_RSPC_alignment, results='asis'}
+kable(
+  x = dtRSPC_SYST[TOT < 5],
+  align   = 'l',
+  caption = "mis-alignment"
+)
+```
+
+\newpage
+
+## Loading & Errors
+
+### Released in BP1
+
+Process Chains which are released in production (BP1) need to be released in 
+all other systems except Development, preferably at the same frequency.
+
+### Released in TEST/UAT
+
+Process Chains which are not released in production but are released in the 
+Test/UAT systems are:  
+1. New developents, being tested.  
+2. Obsolete developments to be decommisioned.  
+3. Temporary developents, to be documented  
+
+### Scheduled
+
+Process Chains which are not released in any system are either:  
+1. Brand new  
+2. Obsolete, to be deleted and transported to all systems  
+3. Business Content, exist only in Development  
+
+### Scheduling
+
+The scheduling of the process chains can be determined from the historical logs
+or from the settings in the starter variant of the Process Chain. 
+
+The following historical Process Chain logs have been analyzed.
+
+```{r describe_rspc, results='asis'}
+kable(
+  x = dtRSPCLOGCHAIN[
+    , .(CHAINS = length(unique(CHAIN_ID)),
+        FROM   = range(DATUM)[1],
+        TO     = range(DATUM)[2],
+        LOGS   = .N),
+    by = .(ID = factor(SYSTID, levels = systord, ordered = TRUE))] %>%
+    setorder(ID))
+```
+
+\newpage
+
+### Alignment
+
+The table below shows the scheduling derived from the triggers
+
+```{r transform_RSPC_trigger }
+dtTRIG <- 
+  dtRSPCCHAIN[
+    TYPE == "TRIGGER", 
+    .(SYSTID, CHAIN_ID, VARIANTE)][
+      dtRSPCTRIGGER[
+        , .(SYSTID   , VARIANTE,  STARTDTTYP,
+            PRDMINS  , PRDHOURS, PRDDAYS  , PRDWEEKS, PRDMONTHS, 
+            PERIODIC)
+      ], 
+      on = .(SYSTID, VARIANTE),
+      nomatch = 0
+      ] %>%
+  .[, SYSTID := factor(
+    x       = SYSTID, 
+    levels  = c("BD1", "BA1", "BP1", "BTP", "BU1"), 
+    ordered = TRUE) ]
+
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtTRIG, 
+    pPATH, pXLSX, "SCHED_TRIG", pAppend = TRUE )}
+```
+
+####  Scheduling by Minute
+
+```{r describe_RSPC_trigger_prdmins, results='asis'}
+kable(
+  x = dcast.data.table(
+    data = dtTRIG[
+      PERIODIC   == "X" &
+      STARTDTTYP == "D" &
+      PRDMINS    != "0,00",
+      .(SYSTID, CHAIN_ID,  PRDMINS)],
+    formula = CHAIN_ID +  PRDMINS ~ SYSTID,
+    fun.aggregate = length,
+    value.var = "SYSTID"))
+```
+
+\newpage
+
+#### Scheduling by Hour
+
+```{r describe_RSPC_trigger_prdhours, results='asis'}
+kable(
+  x = dcast.data.table(
+    data = dtTRIG[
+      PERIODIC   == "X" &
+      STARTDTTYP == "D" &
+      PRDHOURS    != "0,00",
+      .(SYSTID, CHAIN_ID,  PRDHOURS)],
+    formula = CHAIN_ID + PRDHOURS ~ SYSTID,
+    fun.aggregate = length,
+    value.var = "SYSTID"))
+```
+
+\newpage
+
+#### Scheduling by Day
+
+```{r describe_RSPC_trigger_prddays, results='asis'}
+kable(
+  x = dcast.data.table(
+    data = dtTRIG[
+      PERIODIC   == "X" &
+      STARTDTTYP == "D" &
+      PRDDAYS    != "0,00",
+      .(SYSTID, CHAIN_ID,  PRDDAYS)],
+    formula = CHAIN_ID +  PRDDAYS ~ SYSTID,
+    fun.aggregate = length,
+    value.var = "SYSTID"))
+```
+
+\newpage
+
+#### Logs
+
+The table below shows the scheduling derived from the logs. 
+
+```{r transform_RSPC_scheduling_logs_alignment}
+
+dtRSPC_SCHED <- 
+  dcast.data.table(
+    data          = dtRSPCLOGCHAIN[DATUM > ymd("20170501")], 
+    formula       = CHAIN_ID ~ SYSTID,
+    fun.aggregate = length,  
+    value.var     = "CHAIN_ID"
+  )                                         %>% 
+  .[!(BA1 == BP1 | BA1 == BU1) ]            %T>%
+  setcolorder(c("CHAIN_ID", systord))
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtRSPC_SCHED, 
+    pPATH, pXLSX, "SCHED_LOG", pAppend = TRUE )}
+```
+
+```{r describe__RSPC_scheduling_logs_alignment, results='asis'}
+kable(
+  x = dtRSPC_SCHED,
+  align = 'l',
+  caption = "Scheduling from Logs")
+```
+
+### Scheduling based on last 7 days
+
+```{r transform_RSPC_scheduling_logs_alignment_lw}
+
+dtRSPC_SCHED_LW <- 
+  dcast.data.table(
+    data          = dtRSPCLOGCHAIN[DATUM > Sys.Date() - 7], 
+    formula       = CHAIN_ID ~ SYSTID,
+    fun.aggregate = length,  
+    value.var     = "CHAIN_ID"
+  )                                         %>% 
+  .[!(BA1 == BP1 | BA1 == BU1) ]            %T>%
+  setcolorder(c("CHAIN_ID", systord))
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtRSPC_SCHED_LW, 
+    pPATH, pXLSX, "SCHED_LOG_LW", pAppend = TRUE )}
+```
+
+```{r describe__RSPC_scheduling_logs_alignment_lw, results='asis'}
+kable(
+  x = dtRSPC_SCHED_LW,
+  align = 'l',
+  caption = "Scheduling from Logs of last 7 days")
+```
+
+\newpage
+
+### Loading Errors
+
+This paragraph focusses on the loading errors in order to spot any problems and
+determine actions for structural improvements. For this reason a log of Frequent
+Failures and Fixes will be shown.
+
+```{r transform_RSPC_loading_errors, echo=FALSE}
+
+pBI <- "BP1"
+acl <- c(A = "blue", G = "green", R = "red", X = "gray")
+
+dtRSPC_GG <- 
+  unique(dtRSPCLOGCHAIN[, .(SYSTID, CHAIN_ID, 
+                            DATUM , ANALYZED_STATUS)])     %>%
+  .[,            TEAM := substr(CHAIN_ID, 
+                                start = 1, stop = 1)]      %>%
+# .[TEAM == "0", TEAM := "G"]                              %>%
+  dcast.data.table(
+    data          = .,
+    formula       = SYSTID + CHAIN_ID + DATUM + TEAM ~ ANALYZED_STATUS,
+    fun.aggregate = length,
+    value.var     = "TEAM"
+  )                                                        %>%
+  .[, STAT := ifelse(R == 0, "G", "R")]                    %>%
+  .[DATUM > (Sys.Date() - 100), 
+    `:=`(ORD = sum(R, na.rm = TRUE), N = .N), 
+         by = .(SYSTID, CHAIN_ID, TEAM)]                   %>%
+  .[dtRSPCMAIN, on = .(SYSTID, CHAIN_ID)]                  %>%
+  .[, `:=`(
+    FSYSTID = factor(
+      x       = SYSTID, 
+      levels  = c("BD1", "BTP", "BU1", "BA1", "BP1"), 
+      ordered = TRUE),
+    CH_ORD = 0L
+    )]                                                     %>%
+  .[SYSTID == "BP1", CH_ORD := ORD]
+  
+dtRSPC_EVOL <- 
+  melt.data.table(
+    data          = dtRSPC_GG[MAIN == 1     & 
+                              TEAM == "G"],
+    id.vars       = c("SYSTID", "DATUM"),
+    measure.vars  = c("G", "R"),
+    variable.name = "STATUS",
+    na.rm         = TRUE
+  )                                                        %>%
+  .[, .(value = sum(value)), 
+    by = .(SYSTID, DATUM, STATUS)]                         %>%
+  rbind(., data.table(SYSTID = "BDP", DATUM = Sys.Date(), 
+                      STATUS = "G"  , value = 0))          %>%
+  .[, SYSTID_f := factor(
+    x = SYSTID,
+    levels  = c("BDP", "BTP", "BU1", "BD1", "BA1", "BP1"),
+    ordered = TRUE)]
+
+if (pWSHT == TRUE) {
+fWriteToSheet(
+  dcast.data.table(
+    dtRSPC_GG[MAIN == 1     & 
+                DATUM >= Sys.Date() - 100  ],
+    formula       = CHAIN_ID ~ SYSTID,
+    fun.aggregate = length,
+    value.var     = "CHAIN_ID"), 
+  pPATH, pXLSX, "CHAIN_UNI", 
+  pAppend = TRUE )
+
+write.table(
+  dtRSPC_GG, 
+  file      = "dtRSPC_GG.csv", 
+  sep       = ";",
+  row.names = FALSE, 
+  col.names = TRUE)
+
+write.table(
+  dtRSPC_GG, 
+  file      = "dtRSPC_EVOL.csv", 
+  sep       = ";",
+  row.names = FALSE, 
+  col.names = TRUE)}
+
+# rspc_main <- 
+#   setdiff(dtRSPCCHAIN[SYSTID == pBI & TYPE == "TRIGGER", CHAIN_ID ],
+#           dtRSPCCHAIN[SYSTID == pBI & TYPE == "CHAIN"  , VARIANTE])
+# 
+# dtRSPC_AMS1 <- 
+#   unique(dtRSPCLOGCHAIN[, .(SYSTID, CHAIN_ID, DATUM, ANALYZED_STATUS)])
+# 
+# dtRSPC_AMS1 <- 
+#   dtRSPC_AMS1[,  TEAM := substr(CHAIN_ID, start = 1, stop = 1)][
+#     TEAM == "0", TEAM := "G"]
+
+# dtRSPC_AMS2 <- 
+#    dtRSPC_AMS1[, .(CNT = .N), 
+#                by = .(SYSTID, CHAIN_ID, TEAM, ANALYZED_STATUS)]
+
+# dtRSPC_AMS3 <-
+#   dcast.data.table(
+#   data          = dtRSPC_AMS1[SYSTID == pBI & CHAIN_ID %in% rspc_main],
+#   formula       = CHAIN_ID + DATUM + TEAM ~ ANALYZED_STATUS,
+#   fun.aggregate = length,
+#   value.var     = "TEAM"
+#   ) 
+
+# dtRSPC_AMS3[, STAT := ifelse(R == 0, "G", "R")]
+# setkey(dtRSPC_AMS3, CHAIN_ID, DATUM)
+# 
+# dtRSPC_AMS4 <- 
+#   dtRSPC_AMS3[DATUM > ymd("20161231")][, ORD := 0L]
+# dtRSPC_AMS4[DATUM > (Sys.Date() - 100), 
+#             ORD := sum(R), by = .(CHAIN_ID, TEAM)]
+
+
+# dtRSPC_SUM <- 
+#   dcast.data.table(
+#     data          = dtRSPCLOGCHAIN, 
+#     formula       = SYSTID + CHAIN_ID + DATUM ~ ANALYZED_STATUS,
+#     fun.aggregate = length 
+#   )
+# 
+# dtRSPC_SUM[, V1:= NULL]
+# 
+# dtRSPC_DAY <- copy(dtRSPC_SUM)
+# dtRSPC_DAY[, `:=` (AD = A > 0,
+#                    GD = G > 0,
+#                    RD = R > 0,
+#                    XD = X > 0)]
+
+# dtRSPC_TDY <- 
+#   dtRSPC_DAY[, .(A  = sum(A),
+#                  G  = sum(G),
+#                  R  = sum(R),
+#                  X  = sum(X),
+#                  AD = sum(AD),
+#                  GD = sum(GD),
+#                  RD = sum(RD),
+#                  XD = sum(XD)), 
+#              by = .(SYSTID, DATUM)]
+# 
+# dtRSPC_TDY[, DATUM:= ymd(DATUM)]
+
+# ggplot(data = dtRSPC_TDY, mapping = aes(x = DATUM, y = RD)) +
+#   geom_line() +
+#   facet_wrap(facets = "SYSTID", nrow = 3)
+# 
+# ggplot(data = dtRSPC_DAY, 
+#        mapping = aes(x = DATUM, y = RD, color = as.factor(CHAIN_ID),
+#                      group = as.factor(CHAIN_ID))) +
+#   geom_line() +
+#   facet_wrap(facets = "SYSTID")
+
+# ggplot(data    = dtRSPCLOGCHAIN[DATUM > ymd("20160801") & 
+#                                   ANALYZED_STATUS == "R"],
+#        mapping = aes(x = CHAIN_ID, fill = ANALYZED_STATUS )) + 
+#   geom_bar() +
+#   coord_flip()
+
+
+# ggP2 <-
+#   ggplot(data = dtRSPC_AMS2[SYSTID == pBI &
+#                             CHAIN_ID %in% rspc_main]) +
+#   geom_col(mapping  = aes(x    = CHAIN_ID, 
+#                           y    = CNT,  
+#                           fill = ANALYZED_STATUS),
+#            position = "stack") +
+#   coord_flip() +
+#   scale_fill_manual(values = acl) +
+#   facet_wrap(
+#     facets = "TEAM"
+#     )
+# ggP2
+
+# ggP3 <- 
+#   ggplot(data = dtRSPC_AMS3, 
+#          aes(x = DATUM, 
+#              y = CHAIN_ID)) +
+#   geom_raster(aes(fill = STAT)) +
+#   scale_fill_manual(values = colours ) +
+#   theme(legend.position = "top")
+# ggP3
+# 
+# ggP4 <- 
+#   ggplot(data = dtRSPC_AMS4[ORD > 0], 
+#          aes(x = DATUM, 
+#              y = reorder(CHAIN_ID, 
+#                          ORD, 
+#                          function(x){sum(x)} ))) +
+#   geom_raster(aes(fill = STAT)) +
+#   scale_fill_manual(values = acl ) +
+#   theme(legend.position = "top") +
+#   labs(title = pBI,
+#     x = "Day",
+#     y = "Proc Chain") +
+#   facet_wrap(
+#     facets = "TEAM"
+#     )
+# ggP4
+```
+
+
+```{r visualize_RSPC_loading_errors, fig.height=15, fig.width=20, results='asis'}
+#Visualize the loading errors per syste/Chain
+# setdiff(unique(dtRSPC_GG$TEAM), NA)
+for (pTEAM in c("0", "G", "L"))  {
+  
+  cat("\n\n\\newpage\n")
+#  writeLines("ValueForV")
+    
+  ggP5 <- 
+    ggplot(data = dtRSPC_GG[MAIN == 1     & 
+                            TEAM == pTEAM &
+                            DATUM >= Sys.Date() - 100  ], 
+           aes(x = DATUM, 
+               y = reorder(CHAIN_ID, 
+                           CH_ORD, 
+                           function(x){sum(x, na.rm = TRUE)} ))) +
+    geom_raster(aes(fill = STAT)) +
+    scale_fill_manual(values = acl ) +
+    theme(legend.position = "top") +
+    labs(
+      x = "Day",
+      y = "Proc Chain") +
+    facet_grid(
+      facets = TEAM ~ FSYSTID
+    )
+  print(ggP5)
+  
+  ggsave(
+    filename = paste0("./70_figures/", pTEAM, "_RSPC.jpg"),
+    plot     = ggP5,
+    device   = "jpeg",
+    width    = 30, 
+    height   = 20, 
+    units    = "cm"   
+  )
+}
+
+cat("\n\n\\pagebreak\n")
+# writeLines("ValueForV")
+    
+# Visualize the Evolution of Errors
+ggEVOL <- 
+  ggplot(data = dtRSPC_EVOL) +
+  geom_bar(mapping = aes(x      = DATUM, 
+                          y     = value,
+                          color = STATUS,
+                          fill  = STATUS),
+            size = 1,
+           position = "stack",
+           stat     = "identity") +
+  scale_color_manual(values = c(G = "green3", R = "red2") )         +
+  scale_fill_manual(values  = c(G = "green3", R = "red2") )          +
+  theme(legend.position = "top") +
+  labs(
+    x = "Day",
+    y = "# Main Chain's per day") +
+  facet_wrap(
+    facets = "SYSTID_f"
+  )
+ggEVOL
+
+ggsave(
+    filename = paste0("./70_figures/", "RSPC_EVOL.jpg"),
+    plot     = ggEVOL,
+    device   = "jpeg",
+    width    = 30, 
+    height   = 20, 
+    units    = "cm"   
+  )
+
+```
+
+
+```{r Check_Existence, eval=FALSE, include=FALSE}
+dtRSPCCHAINATTR[, CNT := .N, by = .(CHAIN_ID)]
+if (pWSHT == TRUE) {
+  fWriteToSheet(dtRSPCCHAINATTR[CNT < 5 ], 
+                pPATH, pXLSX, "Non_existing_chains", pAppend = TRUE )}
+```
+
+
+

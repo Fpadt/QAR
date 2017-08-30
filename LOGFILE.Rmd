@@ -1,0 +1,228 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Logical Filenames"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    toc: no
+    toc_depth: 4
+classoption: landscape
+---
+
+```{r setup, echo=FALSE, results= "hide"}
+
+ knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	image = TRUE,
+	results = "hide")
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+
+# folder locations
+RW   <- file.path("C:", "Users", "fpadt", "Documents", "RW")
+PRJ  <- file.path(RW , "QAR")
+MOD  <- file.path(PRJ, "05_modules")
+DAT  <- file.path(PRJ, "11_PrepData")
+RES  <- file.path(PRJ, "60_Results")
+FIG  <- file.path(PRJ, "70_Figures")
+
+# Load functions
+# source(file.path(RW, "pythia", "00_RProj", "GenericFunctions.R"))
+# source(file.path(RW , "pythia", "config",                       "PATHS.R"))
+# source(file.path(RW , "pythia", "SharedFunctions",              "GenericFunctions.R"))
+invisible(source(file.path(RW , "QAR"   , "00_RProj"       , "00_Global", "iSynGeneral.R")))
+# source(file.path(PRJ, "config", "PATHS.R"))
+# source(file.path(MOD, "Initialization_functions.R"))
+# source(file.path(MOD, "Visualization_functions.R"))
+
+
+# SAP systems to use
+# pECC_SYST <- "RP1"
+# pECC_CLNT <- "300"
+# pBI_SYST  <- "BP1"
+# pBI_CLNT  <- "300"
+# pLGCINDC  <- "C"
+
+systord  <- c("BD1", "BA1", "BP1", "BTP", "BU1")
+newfiles <- TRUE
+
+# set_theme()
+
+# Data Settings
+pWSHT     <- TRUE
+pROWS     <- -1L
+pSMALL    <- 1000
+pEXMP     <- 50 
+pEXP      <- FALSE
+pPATH     <- RES
+pXLSX     <- paste0("LOGFILENAMES") 
+
+# Open Excel for storing results
+if (file.exists(paste0(pPATH, "/", pXLSX, ".xlsx")) == TRUE) {
+    file.remove(paste0(pPATH, "/", pXLSX, ".xlsx"))
+}
+
+dtPATH <- 
+    data.table(
+      DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
+      PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
+    )
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtPATH, 
+    pPATH, pXLSX, "PATHS", pAppend = FALSE )}
+
+gvLOGO_PATH <- file.path(PRJ, "70_Figures", "GV_LOGO.png") 
+if (!file.exists(gvLOGO_PATH)) {
+  download.file(url      = "http://www.grandvision.com/img/logoGV.png",
+                destfile = gvLOGO_PATH,
+                mode     = 'wb')
+  }
+knitr::include_graphics(gvLOGO_PATH)
+
+if (newfiles == TRUE) {
+  read_and_union <- function(pTableName){
+    lSYSTID <- list("BD1100", "BTP300", "BA1300", "BP1300", "BU1300")
+    
+    dtReturn <- 
+      do.call(
+        rbind,
+        lapply(lSYSTID, function(x) {
+          fGetEXPTable(
+            pTableName = pTableName,
+            pSystID = substr(x, 1, 3),
+            pClient = substr(x, 4, 6)
+          )
+        }))
+    
+    return(dtReturn)
+  }
+  
+  dtPATHTEXT      <- read_and_union("PATHTEXT")[LANGUAGE == "E"]
+  dtFSYSTXT       <- read_and_union("FSYSTXT")[LANGUAGE == "E"]
+  dtFILETEXTCI    <- read_and_union("FILETEXTCI")[LANGU == "E"]
+  dtPATH          <- read_and_union("PATH")
+  dtFILESYS       <- read_and_union("FILESYS")
+  dtFILEPATH      <- read_and_union("FILEPATH")
+  dtFILENAMECI    <- read_and_union("FILENAMECI")
+  
+  write.fst(x = dtPATHTEXT  , path = file.path(DAT, "dtPATHTEXT.fst"))
+  write.fst(x = dtPATH      , path = file.path(DAT, "dtPATH.fst"))
+  write.fst(x = dtFSYSTXT   , path = file.path(DAT, "dtFSYSTXT.fst"))
+  write.fst(x = dtFILETEXTCI, path = file.path(DAT, "dtFILETEXTCI.fst"))
+  write.fst(x = dtFILESYS   , path = file.path(DAT, "dtFILESYS.fst"))
+  write.fst(x = dtFILEPATH  , path = file.path(DAT, "dtFILEPATH.fst"))
+  write.fst(x = dtFILENAMECI, path = file.path(DAT, "dtFILENAMECI.fst"))
+  
+} else {
+  dtPATHTEXT <- 
+    read.fst(path = file.path(DAT, "dtPATHTEXT.fst"), 
+             as.data.table = TRUE)
+  dtPATH <- 
+    read.fst(path = file.path(DAT, "dtPATH.fst"),
+             as.data.table = TRUE)
+  dtFSYSTXT <- 
+    read.fst(path = file.path(DAT, "dtFSYSTXT.fst"),
+                           as.data.table = TRUE)
+  dtFILETEXTCI <- 
+    read.fst(path = file.path(DAT, "dtFILETEXTCI.fst"), 
+             as.data.table = TRUE)
+  dtFILESYS <- 
+    read.fst(path = file.path(DAT, "dtFILESYS.fst"), 
+             as.data.table = TRUE)  
+  dtFILEPATH <- 
+    read.fst(path = file.path(DAT, "dtFILEPATH.fst"), 
+             as.data.table = TRUE)  
+  dtFILENAMECI <- 
+    read.fst(path = file.path(DAT, "dtFILENAMECI.fst"), 
+             as.data.table = TRUE)    
+}
+```
+
+# Logical Paths and Files
+
+```{r transform_01}
+dtLOGFILENAME <- 
+  dtFILETEXTCI[
+    dtFILENAMECI,
+    on = .(SYSTID, FILEINTERN)] %>%
+  dtPATHTEXT[
+    .,
+    on = .(SYSTID, PATHINTERN)] %>%
+  .[dtFILEPATH,
+    on = .(SYSTID, PATHINTERN)] %>%
+  .[dtPATH,
+    on = .(SYSTID, PATHINTERN)] %>%
+  .[dtFILESYS,
+    on = .(SYSTID, FILESYS)]    %>%
+  .[dtFSYSTXT,
+    on = .(SYSTID, FILESYS)]    %>%
+  .[substr(PATHINTERN, 1, 1) == "Z"] %>%
+  .[, .(SYSTID, 
+        PATHINTERN, PATHNAME,
+        FILEINTERN, 
+        FILENAME  , FILEEXTERN, 
+        FILEFORMAT, APPLI_TR01,  
+        PATHEXTERN,  
+        FILESYS   , FSYSTXT)]
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtLOGFILENAME, 
+    pPATH, pXLSX, "LOGFILENAME", pAppend = TRUE )}
+
+```
+
+## Logical Paths
+Table below shows all the logical paths per system. 
+
+The number should be the same in all systems if not it needs to be aligned
+
+```{r describe_PATH_per_system, results='asis'}
+dtPATH_SYST <- 
+  dtLOGFILENAME[, .N, by = .(SYSTID, PATHINTERN, PATHEXTERN)] %>%
+  dcast.data.table(
+    data          = .,
+    formula       = PATHINTERN + PATHEXTERN ~ SYSTID,
+    fun.aggregate = sum,
+    value.var     = "N"  )                        %>%
+  setcolorder(c("PATHINTERN", "PATHEXTERN", systord))
+
+dtPATH_SYST[, .(BD1, BA1)]
+
+# kable(
+#   x = dtPATH_SYST, 
+#   align = 'l',
+#   caption = "Number of Logical Paths per System")
+
+```
+
+## Logical Files
+Table below shows all the logical files per system the internal, external and format is given
+
+The number should be the same in all systems if not it needs to be aligned
+
+```{r describe_FILE_per_system, results='asis'}
+dtFILE_SYST <- 
+  dtLOGFILENAME[, .N, by = .(SYSTID, FILEINTERN, FILEEXTERN, FILEFORMAT)] %>%
+  dcast.data.table(
+    data          = .,
+    formula       = FILEINTERN + FILEEXTERN + FILEFORMAT ~ SYSTID,
+    fun.aggregate = sum,
+    value.var     = "N"  )                        %>%
+  setcolorder(c("FILEINTERN", "FILEEXTERN", "FILEFORMAT", systord))
+
+# kable(
+#   x = dtFILE_SYST, 
+#   align = 'l',
+#   caption = "Number of Logical Files per System")
+
+```
+

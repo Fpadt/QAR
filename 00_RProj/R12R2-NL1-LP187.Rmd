@@ -1,0 +1,322 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "R1 -> R2 Migration"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    toc: no
+    toc_depth: 4
+classoption: landscape
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  image   = TRUE,
+  results = "hide")
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# folder locations
+RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "RW")
+PRJ  <- file.path(RW  , "QAR")
+MOD  <- file.path(PRJ , "00_RProj")
+DAT  <- file.path(PRJ , "11_PrepData")
+RES  <- file.path(PRJ , "60_Results")
+FIG  <- file.path(PRJ , "70_Figures")
+
+#source('../pythia/SharedFunctions/GenericFunctions.R')
+invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
+
+# Data Settings
+fECHO    <- TRUE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+fIMAGE   <- TRUE 
+
+# SAP systems to use
+pECC_SYST <- "RP1"
+pECC_CLNT <- "300"
+pBI_SYST  <- "BP1"
+pBI_CLNT  <- "300"
+pLGCINDC  <- "C"
+
+# Data Settings
+pXLSX    <- "R12R2" 
+pINFO    <- file.path(PRJ, "10_RawData", "INFO.xlsx") 
+pINFO    <- "//grandvision.sharepoint.com/sites/NL1-Proj-iSynergy/05_CoE/90%20BI/INFO.xlsx"
+
+pWSHT    <- TRUE
+newfiles <- TRUE
+SID.lng  <- c("BD1100", "BA1300", "BP1300", "BTP300", "BU1300")
+SID.sht  <- substr(SID.lng, 1, 3)
+
+dtPATH <- 
+  data.table(
+    DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
+    PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
+  )
+
+# Open Excel for storing results
+if (file.exists(paste0(RES, "/", pXLSX, ".xlsx")) == TRUE) {
+  file.remove(paste0(RES, "/", pXLSX, ".xlsx"))
+}
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtPATH, 
+    RES, pXLSX, "PATHS", pAppend = FALSE )}
+
+gvLOGO_PATH <- file.path(FIG, "GV_LOGO.png") 
+if (!file.exists(gvLOGO_PATH)) {
+  download.file(
+    url      = "http://www.grandvision.com/img/logoGV.png",
+    destfile = gvLOGO_PATH,
+    mode     = 'wb')
+}
+knitr::include_graphics(gvLOGO_PATH)
+
+if (newfiles == TRUE) {
+  read_and_union <- function(pTableName){
+    
+    dtReturn <- 
+      do.call(
+        rbind,
+        lapply(as.list(SID.lng), function(x) {
+          fGetEXPTable(
+            pTableName = pTableName,
+            pSystID = substr(x, 1, 3),
+            pClient = substr(x, 4, 6) )
+        }))
+    
+    return(dtReturn)
+  }
+  
+  dtRSRREPDIR  <- read_and_union("RSRREPDIR")
+  dtRSZCOMPDIR <- read_and_union("RSZCOMPDIR")
+  dtTADIR      <- read_and_union("TADIR")
+  dtUSR02      <- fGetEXPTable(pTableName = "USR02", pSystID = "BP1", pClient = 300)
+  dtUSR21      <- fGetEXPTable(pTableName = "USR21", pSystID = "BP1", pClient = 300)  
+  dtADR6       <- fGetEXPTable(pTableName = "ADR6" , pSystID = "BP1", pClient = 300)  
+  dtAUTH       <- fGetEXPTable(pTableName = "#BIC#AG1AAPD0200"
+                               , pSystID = "BP1", pClient = 300)  
+
+  dtUSER       <- as.data.table(read_excel(path = pINFO, sheet = "U.SER"))
+  dtRTST       <- as.data.table(read_excel(path = pINFO, sheet = "R.TST"))  
+  dtTEAM       <- as.data.table(read_excel(path = pINFO, sheet = "T.EAM"))
+  dtOBJR       <- as.data.table(read_excel(path = pINFO, sheet = "O.BJR"))
+  dtWEBI       <- as.data.table(read_excel(path = pINFO, sheet = "W.EBI"))
+  dtQRY        <- as.data.table(read_excel(path = pINFO, sheet = "C.OMMENT"))  
+  dtSTAT       <- as.data.table(read_excel(path = pINFO, sheet = "S.STAT")) %T>%
+    setnames(c("S.CDAY", "COMPID", "S.QDESCR", "U.USER", "S.QEXEC"))
+  
+  write.fst(x = dtRSRREPDIR , path = file.path(DAT, "dtRSRREPDIR.fst"))
+  write.fst(x = dtRSZCOMPDIR, path = file.path(DAT, "dtRSZCOMPDIR.fst"))
+  write.fst(x = dtTADIR     , path = file.path(DAT, "dtTADIR.fst"))
+  write.fst(x = dtUSR02     , path = file.path(DAT, "dtUSR02.fst"))
+  write.fst(x = dtUSR21     , path = file.path(DAT, "dtUSR21.fst"))  
+  write.fst(x = dtADR6      , path = file.path(DAT, "dtADR6.fst"))  
+  write.fst(x = dtSTAT      , path = file.path(DAT, "dtSTAT.fst"))    
+  write.fst(x = dtUSER      , path = file.path(DAT, "dtUSER.fst"))    
+  
+} else {
+  dtRSRREPDIR <- 
+    read.fst(path = file.path(DAT, "dtRSRREPDIR.fst"), 
+             as.data.table = TRUE)
+  dtRSZCOMPDIR <- 
+    read.fst(path = file.path(DAT, "dtRSZCOMPDIR.fst"),
+             as.data.table = TRUE)
+  dtTADIR <- 
+    read.fst(path = file.path(DAT, "dtTADIR.fst"),
+             as.data.table = TRUE)
+  dtUSR02 <- 
+    read.fst(path = file.path(DAT, "dtUSR02.fst"),
+             as.data.table = TRUE)
+  dtUSR21 <- 
+    read.fst(path = file.path(DAT, "dtUSR21.fst"),
+             as.data.table = TRUE)
+  dtADR6 <- 
+    read.fst(path = file.path(DAT, "dtADR6.fst"),
+             as.data.table = TRUE)  
+  dtSTAT <- 
+    read.fst(path = file.path(DAT, "dtSTAT.fst"),
+             as.data.table = TRUE)  
+  dtUSER <- 
+    read.fst(path = file.path(DAT, "dtUSER.fst"),
+             as.data.table = TRUE)    
+}
+```
+
+```{r Transform}
+# remove fields
+dtRSRREPDIR <- 
+  dtRSRREPDIR[, .(SYSTID    , COMPUID , INFOCUBE, COMPTYPE, COMPID, 
+                  RFCSUPPORT, OBJSTAT , READMODE, LASTUSER, MODTIME, 
+                  REPTIME   , GEN1TIME, IS_PLANQUERY)]
+dtRSZCOMPDIR <-
+  dtRSZCOMPDIR[, .(SYSTID , COMPUID , COMPID  , OWNER, 
+                   ACTIVFL, TIMESTMP, LASTUSED, CREATED)]
+
+dtINFOPROV <- 
+  dtOBJR[dtTADIR[, .(SYSTID   , OBJECT, OBJ_NAME, 
+                     SRCSYSTEM, AUTHOR, 
+                     DEVCLASS )], 
+         on = .(OBJECT_IP = OBJECT), 
+         nomatch = 0]
+
+dtINFOPROV <- 
+  unique(dtINFOPROV[, .(SYSTID, OBJ_NAME, SRCSYSTEM, 
+                        AUTHOR, DEVCLASS, REL_IP )])
+
+# Split the Tech Query name in parts and set checks
+dtDIR <- 
+  dtRSRREPDIR[!COMPID == "" & COMPTYPE == "REP"]           %>%
+  .[, paste0("QPART", 1:6) := tstrsplit(COMPID, "_", 
+                                        fixed = TRUE, 
+                                        fill = "")]        %>%
+  .[, `:=`(
+    IN_BP1  = COMPID %in% dtRSRREPDIR[SYSTID == "BP1", 
+                                      COMPID],
+    QNS     = substr(QPART1, 1, 1),
+    QTG     = substr(QPART1, 2, 3),
+    QIP     = QPART2       ,
+    QAA     = substr(QPART2, 3, 4),
+    QIPTP   = substr(QPART2, 5, 6),
+    QP1_LNG = nchar(QPART1),
+    QP2_LNG = nchar(QPART2),
+    QP3_LNG = nchar(QPART3),
+    QPC_LNG = nchar(QPART1) == 3 & 
+      nchar(QPART3) %in% c(3,4))]                          %>%
+  .[, `:=`(
+    IAA    = substr(COMPID, 7, 8),
+    IPT    = substr(COMPID, 9, 10),
+    INS    = substr(QPART1, 1, 1),
+    ITG    = substr(QPART1, 1, 2), 
+    CHK_IP = INFOCUBE == QIP,
+    CHK_AA = QAA   == substr(COMPID, 7, 8),
+    CHK_TP = QIPTP == substr(COMPID, 9, 10))]              %>%
+  dtRSZCOMPDIR[.,
+               on = .(SYSTID, COMPUID, COMPID),
+               nomatch = 0]                                %>%
+  dtTADIR[OBJECT == "ELEM", 
+          .(SYSTID, OBJECT, OBJ_NAME, SRCSYSTEM,
+            AUTHOR, DEVCLASS, CREATED_ON)
+          ][.,
+            on = .(SYSTID, OBJ_NAME == COMPUID),
+            nomatch = NA]                                  %T>%
+  setnames(c("OBJECT"       , "OBJ_NAME"     , 
+             "SRCSYSTEM"    , "AUTHOR"       , 
+             "DEVCLASS"     , "CREATED_ON")  ,
+           c("OBJECT_REP"   , "OBJ_NAME_REP" , 
+             "SRCSYSTEM_REP", "AUTHOR_REP"   , 
+             "DEVCLASS_REP" , "CREATED_ON_REP"))           %>%
+  .[, INFOPROV := sub(pattern     = "@3", 
+                      replacement = "", 
+                      x           = INFOCUBE)]             %>%
+  dtINFOPROV[.,
+             on = .(SYSTID, OBJ_NAME == INFOPROV),
+             nomatch = NA]                                 %T>%
+  setnames(c("OBJ_NAME"     ,
+             "SRCSYSTEM"    , "AUTHOR"       ,
+             "DEVCLASS")    ,
+           c("OBJ_NAME_IP"  ,
+             "SRCSYSTEM_IP" , "AUTHOR_IP"    ,
+             "DEVCLASS_IP"))                               %>%
+  .[, CNT := .N, by = .(COMPID)]                          
+
+```
+
+```{r COE_Comments}
+
+dtCOE <- 
+  dcast.data.table(
+    dtDIR[, .(COMPID, SYSTID)], 
+    fun.aggregate = length,
+    value.var     = "SYSTID",
+    formula       = COMPID ~ SYSTID)        %>%
+  .[ BD1 == 1 & (BA1 + BP1 + BTP + BU1) == 0, 
+     COE := "CHECK if New/Old Development"]                %>%
+  .[ (BD1 + BA1) == 2 & (BP1) == 0, 
+     COE := "CHECK if new R2 Development"]                 %>%
+  .[ (BD1 + BA1 + BTP + BP1) == 4 & (BU1) == 0, 
+     COE := "TRANSPORT TO BU1"]                            %>%
+  .[ (BTP) == 0 & (BU1) == 1, 
+     COE := "TRANSPORT TO BTP"]                            %>%
+  .[ (BD1 + BA1 + BTP + BP1 + BU1) == 5, 
+     COE := "CHECK to be Authorized"]                      %>%
+  .[ BD1 == 0, 
+     COE := "DELETE AS NOT in BD1"]                        %>%
+  .[ is.na(COE), 
+     COE := "CHECK SPECIAL CASE?"]                         %>%
+  .[ substr(COMPID, 1, 1) == "Z", 
+     COE := "DELETE or REBUILD as G/L"]                    %>%
+  .[dtDIR, on = .(COMPID), nomatch = NA]
+```
+
+
+```{r GetStats}
+# Set Flag User Status
+
+dtUSR <- 
+  dtUSR21[dtADR6, on = .(SYSTID, MANDT = CLIENT, 
+                         PERSNUMBER, ADDRNUMBER),
+          nomatch = 0]                                     %>%
+  .[, .(SYSTID, MANDT, BNAME, SMTP_ADDR)]                  %>%
+  .[dtUSR02, on = .(SYSTID, MANDT, BNAME), nomatch = NA]   
+
+dtUSR[, USTATE := ifelse(
+  GLTGB >= format( Sys.Date(), format = "%Y%m%d"),
+  "VALID", "INVALID") ]
+
+dtUSR[, USTATE := ifelse(
+  USTATE == "VALID" & UFLAG == "0",
+  "VALID", "LOCKED") ]
+
+dtUSR <- 
+  dtUSR[, .(BNAME, SMTP_ADDR, CLASS, USTYP, USTATE)]       %>%
+  .[dtUSER, on = .(CLASS)]                                 %>%
+  .[dtSTAT , on = .(BNAME = USER)]                         %>%
+  .[dtCOE[SYSTID == "BP1"]  , on = .(COMPID)]
+
+```
+
+```{r addInfo}
+dtINFO <-
+  dtUSR                                                    %>%
+  dtTEAM[., on = .(OWNER)    , nomatch = NA]               %>%
+  dtWEBI[., on = .(COMPID)   , nomatch = NA, 
+         allow.cartesian = TRUE]                           %>%
+  dtQRY [., on = .(COMPID)   , nomatch = NA]  
+  
+```
+
+```{r CleanseMem}
+rm(dtADR6     , dtUSR21     , dtUSR02   , dtUSER,
+   dtTEAM     , dtTADIR     , dtSTAT    , dtPATH, 
+   dtDIR      , dtCOE       , dtUSR,
+   dtQRY      , dtWEBI       , dtOBJR, 
+   dtRSRREPDIR, dtRSZCOMPDIR, dtINFOPROV)
+```
+
+```{r ExportTxt}
+write.table(
+  dtINFO,
+  file      = file.path(RES, "R12R2.csv"),
+  sep       = ";",
+  row.names = FALSE,
+  col.names = TRUE,
+  quote     = TRUE)
+```
+
+```{r ExportXLS, eval=FALSE, include=FALSE}
+system.time(
+  fWriteToSheet(dtINFO, 
+                RES, pXLSX, "DATA", pAppend = FALSE )
+)
+```
+

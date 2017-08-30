@@ -1,0 +1,108 @@
+---
+title: "QueryStructure"
+author: "F.J.Padt"
+date: "30 april 2017"
+output: pdf_document
+---
+
+```{r gvLOGO, echo=FALSE, fig.align='right', message=FALSE, warning=FALSE, out.width="200px" }
+gvLOGO_PATH <- file.path(".", "70_Figures", "GV_LOGO.png") 
+download.file("http://www.grandvision.com/img/logoGV.png", 
+              gvLOGO_PATH, mode = 'wb')
+knitr::include_graphics(gvLOGO_PATH)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE, message = FALSE, warning = FALSE
+)
+```
+
+```{r Initialization, include=FALSE}
+rm(list = ls())
+gc()
+#source('../pythia/SharedFunctions/GenericFunctions.R')
+source('~/RW/QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# SAP systems to use
+pBI_SYST  <- "BP1"
+pBI_CLNT  <- "300"
+pLGCINDC  <- "C"
+
+# Data Settings
+pPath     <- "./60_Results" 
+pXLSX     <- "QSTRUCT" 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(BI_SYST = pBI_SYST ,
+                         BI_CLNT = pBI_CLNT), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+```
+
+```{r ReadData}
+dtRSRREPDIR <- 
+  fGetEXPTable(pTableName = "RSRREPDIR", 
+               pSystID    = pBI_SYST,
+               pClient    = pBI_CLNT,  
+               pKey       = c("COMPUID"))
+
+dtRSZCOMPDIR <- 
+  fGetEXPTable(pTableName = "RSZCOMPDIR", 
+               pSystID    = pBI_SYST,
+               pClient    = pBI_CLNT,  
+               pKey       = c("COMPUID"))
+
+dtRSZELTXREF <- 
+  fGetEXPTable(pTableName = "RSZELTXREF", 
+               pSystID    = pBI_SYST,
+               pClient    = pBI_CLNT,  
+               pKey       = c("SELTUID"))
+
+dtRSZSELECT <- 
+  fGetEXPTable(pTableName = "RSZSELECT", 
+               pSystID    = pBI_SYST,
+               pClient    = pBI_CLNT,  
+               pKey       = c("ELTUID"))
+
+dtRSZELTDIR <- 
+  fGetEXPTable(pTableName = "RSZELTDIR", 
+               pSystID    = pBI_SYST,
+               pClient    = pBI_CLNT,  
+               pKey       = c("ELTUID"))
+
+dtRSZELTTXT <- 
+  fGetEXPTable(pTableName = "RSZELTTXT", 
+               pSystID    = pBI_SYST,
+               pClient    = pBI_CLNT,  
+               pKey       = c("ELTUID"))
+
+dtRSZGLOBV <- 
+  fGetEXPTable(pTableName = "RSZGLOBV", 
+               pSystID    = pBI_SYST,
+               pClient    = pBI_CLNT,  
+               pKey       = c("SYSTID"))
+
+```
+
+```{r Combine}
+dtQS <- dtRSRREPDIR[dtRSZCOMPDIR, 
+                    on = .(SYSTID, COMPUID, OBJVERS), 
+                    nomatch = 0]
+
+dtES <- dtRSZELTXREF[dtRSZSELECT,
+                     on = .(SYSTID, TELTUID = ELTUID, OBJVERS),
+                     nomatch = 0]
+
+dtXR <- dtRSZELTXREF[dtES,
+                     on = .(SYSTID, TELTUID = SELTUID, OBJVERS),
+                     nomatch = 0]
+
+dtALL <- dtQS[dtXR,
+              on = .(SYSTID, COMPUID = SELTUID, OBJVERS),
+              nomatch = 0]
+```
+

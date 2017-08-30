@@ -1,0 +1,32 @@
+---
+title: "Untitled"
+author: "F.J.Padt"
+date: "7 mei 2016"
+output: html_document
+---
+
+```{r}
+dtTBTCO <- fGetEXPTable(pTableName = "TBTCO", pSystID = "BP1", 
+                        pKey = c("JOBNAME", "JOBCOUNT", "STEPCOUNT"))
+dtTBTCP <- fGetEXPTable(pTableName = "TBTCP", pSystID = "BP1",
+                        pKey = c("JOBNAME", "JOBCOUNT", "STEPCOUNT"))
+
+dtTBTC <- dtTBTCO[dtTBTCP]
+dtTBTC <- dtTBTC[PERIODIC == "X" &  JOBNAME != "BI_WRITE_PROT_TO_APPLLOG"]
+
+unique(dtTBTC[STATUS == "S"]$i.AUTHCKNAM)
+View(dtTBTC[i.AUTHCKNAM == "CLAAR" & STATUS == "S"])
+```
+
+```{r}
+dtTBTCO <- fGetEXPTable(pTableName = "TBTCO", pSystID = "RP1", 
+                        pKey = c("JOBNAME", "JOBCOUNT", "STEPCOUNT"))
+dtTBTCP <- fGetEXPTable(pTableName = "TBTCP", pSystID = "RP1",
+                        pKey = c("JOBNAME", "JOBCOUNT", "STEPCOUNT"))
+
+dtTBTC <- dtTBTCO[dtTBTCP]
+dtTBTC <- dtTBTC[PERIODIC == "X" & STATUS == "S" &  JOBNAME != "BI_WRITE_PROT_TO_APPLLOG"]
+
+unique(dtTBTC[STATUS == "S" & !grepl("^BTC_", i.AUTHCKNAM)]$i.AUTHCKNAM)
+View(dtTBTC[i.AUTHCKNAM == "CLAAR" & STATUS == "S"])
+```

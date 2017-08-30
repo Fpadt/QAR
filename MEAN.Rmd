@@ -1,0 +1,172 @@
+---
+title: "MEAN"
+author: "F.J.Padt"
+date: "25 februari 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+[DESIGN](https://projects.gvshare.com/iSynergy/01_Release_1/06._Reporting/02._Design/01._FDs/R20_POS Sales - Margin/)
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+rm(list=ls())
+gc()
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# Data Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+
+# SAP systems to use
+pECC_SYST <- "RP1"
+pECC_CLNT <- "300"
+pBI_SYST  <- "BA1" 
+pBI_CLNT  <- "300"
+pLGCINDC  <- "C"
+
+# Data Settings
+pROWS     <- -1L
+pSMALL    <- 1000
+pEXP      <- FALSE
+pPath     <- "./60_Results"  
+pXLSX     <- paste0(pECC_SYST, "MEAN", "_CHK") 
+pEXPORT   <- paste0(pECC_SYST, "MEAN" , ".csv") 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(ECCSYST = pECC_SYST, 
+                         ECCCLNT = pECC_CLNT,
+                         BI_SYST = pBI_SYST ,
+                         BI_CLNT = pBI_CLNT), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+```
+
+*Global Trade Item Number (GTIN)*
+is an identifier for trade items, developed by GS1.[1] Such identifiers are 
+used to look up product information in a database (often by entering the number 
+through a barcode scanner pointed at an actual product) which may belong 
+to a retailer, manufacturer, collector, researcher, or other entity. 
+
+The GTIN standard has incorporated the International Standard Book 
+Number (ISBN), International Standard Serial Number (ISSN), International 
+Standard Music Number (ISMN), International Article Number (which includes 
+the European Article Number and Japanese Article Number) and some Universal 
+Product Codes, into a universal number space.
+
+The uniqueness and universality of the identifier is useful in establishing 
+which product in one database corresponds to which product in another database, 
+especially across organizational boundaries.
+
+GTINs may be 8, 12, 13 or 14 digits long, and each of these 4 numbering 
+structures are constructed in a similar fashion, combining 
+Company Prefix, Item Reference and a calculated Check Digit (GTIN-14 
+adds another component- the Indicator Digit, which can be 1-8). 
+GTIN-8s will be encoded in an EAN-8 barcode. GTIN-12s may be shown in UPC-A, 
+ITF-14, or GS1-128 barcodes. GTIN-13s may be encoded in EAN-13, ITF-14 
+or GS1-128 barcodes, and GTIN-14s may be encoded in ITF-14 or GS1-128 barcodes.
+
+The choice of barcode will depend on the application; for example, items to be 
+sold at a retail establishment could be marked with EAN-8, EAN-13, UPC-A or 
+UPC-E barcodes.
+
+**Check Digit**
+The item is a one digit number that enables the scanner system to immediately 
+verify the accurate data translation of the Optical Product Code as the symbol 
+is scanned. 
+The nine-digit Optical Product Code, plus a scanner readable check digit 
+equals the ten digit total. It is represented in the bars and spaces that 
+make up the complete scanner readable symbol.
+
+The EAN-8 code is an eight-digit barcode used usually for very small articles, 
+such as chewing gum, where fitting a larger code onto the item would 
+be difficult. 
+Note: the equivalent UPC small format barcode, UPC-E, encodes a GTIN-12 
+with a special Company Prefix that allows for "zero suppression" of 
+4 zeros in the GTIN-12. The GS1 encoding/decoding rules state that the 
+entire GTIN-12 is used for encoding and that the entire GTIN-12 is to be 
+delivered when scanned.
+
+The OPC code is used for marking retail optical products, much like the UPC 
+code is used for marking general retail items. The code uses the Interleaved 
+2 of 5 barcode symbology.
+Digits 1 through 5 identify the manufacturer of the item
+
+
+**Optical Industry Association (OPC) Product Marking**
+The OPC is a 10-digit, numeric code that identifies the manufacturer and product."
+
+Home > Barcode Basics > Different Types of Barcodes > OPC,
+
+**Manufacturer Identification Number** 
+The manufacturer identification number is a five digit number received from 
+The Vision Council.
+
+**Item Identification Number** 
+The item is a four-digit number assigned and controlled by the 
+optical manufacturer. The item number must be unique to each individual product.
+
+
+
+```{r ReadData}
+
+dtMEAN       <- fGetEXPTable(pTable  = "MEAN", pKey = c("MATNR", "MEINH"),
+                             pSystID = pECC_SYST, pClient = "300")
+
+# dtMEAN <- dtMEAN[EANTP == "HE" &  HPEAN == "X" & MEINH == "ST"]
+dtMEAN <- dtMEAN[EANTP == "HE" ]
+setkey(dtMEAN, MATNR, LFNUM)
+```
+
+```{r Double EAN}
+# Count EAN 
+dtMEAN[, `:=` (CNT_EAN = .N), by= .(EAN11, MEINH)]
+dtMEAN[, DUP:= duplicated(dtMEAN, by = c("EAN11", "MEINH"))]
+dtCHK01 <- dtMEAN[CNT_EAN > 1]
+setkey(dtCHK01, EAN11)
+
+fWriteToSheet(dtCHK01, 
+              pPath, pXLSX, "Double_EAN", pAppend = TRUE)
+
+dtMEAN <- dtMEAN[DUP == FALSE][, `:=` (DUP = NULL, CNT_EAN = NULL)]
+
+# rm(dtCHK01)
+
+```
+
+```{r Double SAP}
+# Count SAP 
+dtMEAN[, `:=` (CNT_SAP = .N), by= .(MATNR, MEINH)]
+dtMEAN[, DUP:= duplicated(dtMEAN, by = c("MATNR", "MEINH"))]
+dtCHK02 <- dtMEAN[CNT_SAP > 1]
+
+fWriteToSheet(dtCHK02, 
+              pPath, pXLSX, "Double_SAP", pAppend = TRUE)
+
+dtMEAN <- dtMEAN[DUP == FALSE][, `:=` (DUP = NULL, CNT_SAP = NULL)]
+
+# rm(dtCHK01)
+
+```
+
+```{r}
+dtCHK03 <- fChkEAN(pEAN = dtMEAN$EAN11)
+
+fWriteToSheet(dtCHK03[RC != 0],
+               pPath, pXLSX, "EAN_ERROR", pAppend = TRUE)
+write.table(dtCHK03, file = "EAN_CHK_ALL.csv", sep = ";",
+            col.names = TRUE, row.names = FALSE)
+```
+

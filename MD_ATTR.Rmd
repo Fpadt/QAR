@@ -1,0 +1,59 @@
+---
+title: "Empty Attributes"
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+library("reshape2", lib.loc="~/R/R-3.2.0/library")
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# Data Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+
+# SAP systems to use
+pSYSTID <- c("BD1C100", "BA1C200", "BP1C300")
+
+# Data Settings
+pPATH     <- "./60_Results"  
+pFILE     <- "DAP"
+pXLSX     <- "xlsx"
+pFULLNAME <- paste0(pPATH, "/", pFILE, ".", pXLSX)
+
+# Open Excel for storing results
+if(file.exists(paste0(pFULLNAME, "/", pXLSX)) == TRUE){
+   file.remove(paste0(pPpFULLNAMEath, "/", pXLSX))
+}
+
+fWriteToSheet(data.frame(SYSTID = pSYSTID), 
+              pPATH, pFILE, "PARAM"   , pAppend = FALSE )
+
+```
+
+```{r ReadRawData, echo=fECHO, eval=fEVAL, results=fRESULTS}
+
+dtPLANT <- as.data.table(read.csv2("~/RW/QAR/10_RawData/PLANT.csv", 
+                                   stringsAsFactors=FALSE))
+
+vTMP        <-   sapply(x = dtPLANT, FUN = function(x) length(unique(x)))
+dtPLANT_CNT <- data.table(FIELD = names(vTMP), CNT = vTMP )
+  
+fWriteToSheet(dtOverview, 
+              pPATH, pFILE, "Overview", pAppend = TRUE )
+
+```
+

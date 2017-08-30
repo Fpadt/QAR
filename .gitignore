@@ -94,11 +94,16 @@ sympy-plots-for-*.tex/
 *.pdf
 QAR.Rproj
 # R History
+*.Rhistory
 .Rhistory
 # RData
 .RData
+*.RData
 # Data File
 10_RawData
 11_PrepData
+60_Results
+70_Figures
 # Defect Screenshots
 80_Screenshots
+# excel and Txt

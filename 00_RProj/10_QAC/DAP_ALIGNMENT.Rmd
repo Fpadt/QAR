@@ -1,0 +1,138 @@
+
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+rm(list=ls())
+gc()
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+
+# Data Settings
+fECHO    <- TRUE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+fIMAGE   <- TRUE 
+
+# SAP systems to use
+pECC_SYST <- "RP1"
+pECC_CLNT <- "300"
+pBI_SYST  <- "BP1" 
+pBI_CLNT  <- "300"
+pLGCINDC  <- "C"
+
+# Data Settings
+pOPCO     <- "GVBNL"
+pARTGRP   <- c("CL")
+pROWS     <- -1L
+pSMALL    <- 1000
+pEXMP     <- 50 
+pEXP      <- FALSE
+pPath     <- "./60_Results" 
+pXLSX     <- paste0(pOPCO, "_SALES_", pARTGRP) 
+# pEXPORT   <- paste0("POS_HISTORY" , ".csv") 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(ECCSYST = pECC_SYST, 
+                         ECCCLNT = pECC_CLNT,
+                         BI_SYST = pBI_SYST ,
+                         BI_CLNT = pBI_CLNT), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+```
+
+---
+title: "Legacy Sales - GrandVision Benelux - "
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+---
+title: "Alignment - Dev, Acc & Prod"
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+rm(list=ls())
+gc()
+
+library("reshape2", lib.loc="~/R/R-3.2.0/library")
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# Data Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+
+# SAP systems to use
+pSYSTID  <- c("BD1C100", "BA1C300", "BP1C300", "BDPC100", "BTPC300")
+dtSYSTID <- data.table(SYSTID = substr(pSYSTID,1,3), SYSTSQ = 1:5) 
+
+# Data Settings
+pPATH     <- "./60_Results"  
+pFILE     <- "DAP"
+pXLSX     <- "xlsx"
+pFULLNAME <- paste0(pPATH, "/", pFILE, ".", pXLSX)
+
+# Open Excel for storing results
+if(file.exists(paste0(pFULLNAME, "/", pXLSX)) == TRUE){
+   file.remove(paste0(pPpFULLNAMEath, "/", pXLSX))
+}
+
+fWriteToSheet(data.frame(SYSTID = pSYSTID), 
+              pPATH, pFILE, "PARAM"   , pAppend = FALSE )
+
+```
+
+```{r ReadRawData, echo=fECHO, eval=fEVAL, results=fRESULTS}
+
+dtDAP <- fread("./10_RawData/qryDAP4R.csv")
+setnames(dtDAP, old = c("ANALYSIS",  "SYSTID", "CLNT", "TABLE", "TABLE_DESC", "START", "DTIME", "REC", "TYPE", "COMMENT" ))
+dtDAP[, `:=`(ANALYSIS= NULL, FILE = paste0(SYSTID, "C", CLNT, "_", TABLE))]
+dtDAP <- dtSYSTID[dtDAP, on= "SYSTID"]
+setkey(dtDAP, "TABLE", "SYSTSQ")
+```
+
+
+
+*Transports*
+
+```{r}
+dtTPALOG <- rbind(
+  fGetEXPTable(pTableName = "TPALOG", 
+               pSystID = "BD1", pClient = "100"),
+  fGetEXPTable(pTableName = "TPALOG", 
+               pSystID = "BP1", pClient = "300"))
+setkey(dtTPALOG, "TRKORR", "SYSTID", "TRTIME" )
+
+dtTPALOG <- dtTPALOG[substr(TRKORR, 1, 2) == "BD" ]
+```
+

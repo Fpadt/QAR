@@ -1,0 +1,182 @@
+---
+title: "CompStore"
+author: "F.J.Padt"
+date: "22 februari 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+[DESIGN](https://projects.gvshare.com/iSynergy/01_Release_1/06._Reporting/02._Design/01._FDs/R20_POS Sales - Margin/)
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+rm(list=ls())
+gc()
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+
+# Data Settings
+fECHO    <- TRUE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+fIMAGE   <- TRUE 
+
+# SAP systems to use
+pECC_SYST <- "RP1"
+pECC_CLNT <- "300"
+pBI_SYST  <- "BP1" 
+pBI_CLNT  <- "300"
+
+# Data Settings
+pROWS     <- -1L
+pSMALL    <- 1000
+pEXMP     <- 50 
+pEXP      <- FALSE
+pPath     <- "./60_Results" 
+pXLSX     <- paste0(pBI_SYST, "_CompStore") 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(ECCSYST = pECC_SYST, 
+                         ECCCLNT = pECC_CLNT,
+                         BI_SYST = pBI_SYST ,
+                         BI_CLNT = pBI_CLNT), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+```
+
+```{r Load Data}
+ECC_PP <- fGetEXPTable(pTableName = "T001W", 
+               pSystID = pECC_SYST, pClient = "300")
+
+BW_QP <- fGetEXPTable(pTableName = "#BI0#QPLANT", 
+               pSystID = pBI_SYST, pClient = "300")
+BW_QP[, `:=` (DATETO   = as.Date(DATETO  , "%Y%m%d"), 
+               DATEFROM = as.Date(DATEFROM, "%Y%m%d"))]
+setkey(BW_QP, PLANT, DATETO)
+
+BW_PP <- fGetEXPTable(pTableName = "#BI0#PPLANT", 
+               pSystID = pBI_SYST, pClient = "300")
+BW_PP[, `:=` (RT_LCLDAT = as.Date(RT_LCLDAT, "%Y%m%d"), 
+               RT_LOPDAT = as.Date(RT_LOPDAT, "%Y%m%d"))]
+setkey(BW_PP, PLANT)
+
+BW_PP <- BW_PP[PLANTCAT == "A", 
+                 .(SYSTID, PLANT, RT_LCLDAT, RT_LOPDAT, SALESORG ) ]
+BW_QP <- BW_QP[               , 
+                 .(SYSTID, PLANT, DATETO, DATEFROM, G1COMPIND    ) ]
+
+# restrict to stores exising in ECC
+BW_PP <- BW_PP[PLANT %in% ECC_PP$WERKS]
+BW_QP <- BW_QP[PLANT %in% ECC_PP$WERKS]
+```
+
+```{r Detail Q}
+BW_LNG <- melt.data.table(
+  BW_QP,
+  id.vars       = c("SYSTID", "PLANT", "G1COMPIND"),
+  measure.vars  = c("DATETO", "DATEFROM"),
+  variable.name = "DATETYP",
+  value.name    = "DATE"
+  )
+setkey(BW_LNG, PLANT, DATE)
+
+BW_LNG[DATE == as.Date("1000-01-01", "%Y-%m-%d") &
+       DATETYP == "DATEFROM" &
+       G1COMPIND == "",
+       IND := "COMP11"]
+          
+BW_LNG[DATETYP == "DATETO" &
+          G1COMPIND == "",
+          IND := "COMP13"]
+          
+BW_LNG[DATETYP == "DATEFROM" &
+          G1COMPIND == "X",
+          IND := "COMP21"]
+
+BW_LNG[DATETYP == "DATETO" &
+          G1COMPIND == "X" ,
+          IND := "COMP23"]
+
+BW_LNG[DATE != as.Date("1000-01-01", "%Y-%m-%d") &
+          DATETYP == "DATEFROM" &
+          G1COMPIND == "",
+        IND := "COMP31"]
+
+BW_LNG[DATE == as.Date("9999-12-31", "%Y-%m-%d") &
+          G1COMPIND == "",
+          IND := "COMP33"]
+
+setcolorder(BW_LNG,
+            c("SYSTID", "PLANT", "DATETYP", "DATE",  "G1COMPIND" , "IND"))
+
+
+BW_PPL <- melt.data.table(
+  BW_PP,
+  id.vars = c("SYSTID", "PLANT"),
+  measure.vars = c("RT_LCLDAT", "RT_LOPDAT"),
+  variable.name = "DATETYP",
+  value.name = "DATE"
+  )
+
+# BW_PPL[, G1COMPIND:= NA]  
+BW_PPL[DATETYP == "RT_LOPDAT" , 
+        `:=` (IND = "COMP12", G1COMPIND = "")]    
+BW_PPL[DATETYP == "RT_LCLDAT" , 
+        `:=` (IND = "COMP22", G1COMPIND = "X")] 
+# BW_PPL[DATETYP == "RT_LCLDAT" & is.na(DATE), 
+#         `:=` (DATE = as.Date("9999-12-31", "%Y-%m-%d"))]
+
+BW_ALL <- rbind(BW_LNG, BW_PPL)
+setkey(BW_ALL, SYSTID, PLANT, IND, DATE)
+```
+
+
+```{r DCAST}
+BW_D <- dcast.data.table(BW_ALL, 
+               fun.aggregate = function(x){as.Date(max(x, na.rm = TRUE))}, 
+               SYSTID + PLANT ~ IND, value.var = "DATE")
+
+# setcolorder(BW_D, c("SYSTID", "PLANT", "B_COMP", "ISCOMP", "A_COMP"))
+```
+
+```{r COMBINE_OC_DATE}
+BW <- BW_D[BW_PP, on=.(SYSTID, PLANT)]
+BW[, `:=`(comp20 = as.Date(paste(
+  as.character(year(COMP12) + 2), "01", "01", sep = "-", "%Y-%m-%d"
+  )),
+  COMPxx = (as.Date(paste(
+  as.character(year(COMP12) + 2), "01", "01", sep = "-", "%Y-%m-%d"
+  )) > COMP22))]
+
+BW[, COMPxx:= (!is.na(COMP22) & COMPxx)]
+
+
+# setcolorder(BW, c("SYSTID"   , "SALESORG" , "PLANT", 
+#                    "RT_LOPDAT", "RT_LCLDAT", 
+#                    "B_COMP", "ISCOMP", "A_COMP"))
+
+fWriteToSheet(BW, 
+              pPath, pXLSX, "COMP", pAppend = FALSE )
+```
+
+
+
+```{r, eval=FALSE, include=FALSE}
+load("BWBA.RData")
+load("BWBP.RData")
+BW <- BWBP[BWBA, on = .(PLANT), nomatch = 0]
+
+fWriteToSheet(BW, 
+              pPath, "BW_BA1_BP1", "BW", pAppend = FALSE )
+```
+

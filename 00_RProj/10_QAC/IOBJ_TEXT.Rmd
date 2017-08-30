@@ -1,0 +1,207 @@
+---
+title: "InfoObjextText"
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+library("reshape2")
+rm(list=ls())
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# Initialization
+# IN MS ACCESS run IOBJECTS_RECORDCOUNT in modiSYN
+
+# Data Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+
+# Data Settings
+pSYSTID   <- "BP1"
+pCLNT     <- "300"
+pLOGSYS   <- paste0(pSYSTID, "C", pCLNT)
+pHOME     <- "C:/Users/fpadt/Documents/RW/QAR"
+pPATH     <- paste0(pHOME, "/60_Results")  
+pFILE     <- "IOBJ_TEXT"
+pXLSX     <- "xlsx"
+pFULLNAME <- paste0(pPATH, "/", pFILE, ".", pXLSX)
+pHEAD     <- 5 
+
+lCol <- c("LANGU", "TXTSH", "TXTMD", "TXTLG")
+
+# Open Excel for storing results
+if(file.exists(paste0(pFULLNAME, "/", pXLSX)) == TRUE){
+   file.remove(paste0(pPpFULLNAMEath, "/", pXLSX))
+}
+
+# fWriteToSheet(data.frame(LOGSYS = pLOGSYS), 
+#               pPATH, pFILE, "PARAM"   , pAppend = FALSE )
+
+```
+
+```{r Functions, echo=fECHO, eval=fEVAL, results=fRESULTS}
+
+fGetTableColUCNT <- function(pTABLE){
+
+  # Load Table from Access
+  dtTMP    <-  fGetEXPTable(paste(pLOGSYS, pTABLE, sep = "_"))
+
+  vecRES   <- do.call(rbind, 
+                      lapply(dtTMP, function(x){length(unique(x))}))
+  dtRETURN <- data.table(
+    TABLE     = pTABLE,
+    FIELDNAME = row.names(vecRES), 
+                vecRES)
+
+  setnames(dtRETURN, "V1", "UCNT") 
+
+  rm(dtTMP)
+  
+  return(dtRETURN)
+}
+
+```
+
+```{r InfoObject, echo=fECHO, eval=fEVAL, results=fRESULTS}
+dtROOSOURCE <- fGetEXPTable(pTable = "ROOSOURCE", pKey = "OLTPSOURCE",  
+                            pSystID = "RP1" , pClient = "300")
+dtDSOBJVERS <- as.data.table(
+  dcast(dtROOSOURCE, 
+        OLTPSOURCE + EXMETHOD + EXTRACTOR ~ OBJVERS,
+        fun = length,
+        value.var = "OBJVERS"))
+
+dtRSDIOBJ <- fGetEXPTable(pTable = "RSDIOBJ", pKey = "IOBJNM",  
+                          pSystID = "BP1" , pClient = "300")
+
+dtIOBJTP <- as.data.table(table(dtRSDIOBJ$IOBJTP))
+setnames(dtIOBJTP, 
+         c("V1"  , "N"),
+         c("TYPE", "COUNT"))
+dtIOBJTP <- dtIOBJTP[order(COUNT, decreasing = TRUE)]
+
+dtRSDCHABAS <-  fGetEXPTable(pTable = "RSDCHABAS", pKey = "CHABASNM",   
+                             pSystID = "BP1"     , pClient = "300")
+
+dtIOBJTAB   <- CJ(IOBJ  = dtRSDCHABAS$CHABASNM, 
+                  TABTP = c("S", "P", "T"))
+dtIOBJTAB   <- dtIOBJTAB[, `:=` (
+  OWNER   = ifelse(substr(IOBJ, 1, 1) == "0", "SAP", "CST"),
+  TABNAME = ifelse(substr(IOBJ, 1, 1) == "0", 
+                   paste0("/BI0/", TABTP, substr(IOBJ, 2, nchar(IOBJ))), 
+                   paste0("/BIC/", TABTP, substr(IOBJ, 1, nchar(IOBJ))))
+  )] 
+
+dtIOBJTABRECCNT <- fGetEXPTable("qryIOBJ_TABLE_RECCOUNT")
+dtIOBJTAB <- merge(dtIOBJTAB, dtIOBJTABRECCNT, by = "TABNAME")
+dtIOBJCTB <- as.data.table(
+  dcast(dtIOBJTAB, 
+        SYSTEMID + OWNER + IOBJ ~ TABTP, 
+        value.var = "RECORDCOUNT"))
+setcolorder(dtIOBJCTB, c("SYSTEMID", "OWNER", "IOBJ", "S", "P", "T")) 
+
+dtTMP <- dtRSDCHABAS[, .(CHABASNM, CHATP, NOVALFL, ATTRIBFL, TXTTABFL)]
+setnames(dtTMP, "CHABASNM", "IOBJ")
+dtIOBJCTB <- merge(dtIOBJCTB, 
+                   dtTMP,
+                   by = "IOBJ")
+rm(dtTMP)
+
+```
+
+```{r ReadRawData, echo=fECHO, eval=fEVAL, results=fRESULTS}
+
+dtMISTXT <- dtIOBJCTB[S > 1 & T < 2 & TXTTABFL == TRUE & CHATP == "GEN"]
+dtMISTXT <- dtMISTXT[, OLTPSOURCE:= paste(IOBJ, "TEXT", sep="_")]
+
+dtMISTXT <- merge(dtMISTXT, dtDSOBJVERS, by = "OLTPSOURCE")
+
+# fWriteToSheet(dtMISTXT, 
+#               pPATH, pFILE, "Missing_DS_BCT", pAppend = TRUE )
+```
+
+# Info Objects #
+
+## SAP Business Content - Missing Text ##
+The SAP BCT Info Objects have a datasource in the source system to deliver the texts. 
+This analysis checks if these data sources are activated and the texts are loaded.   
+**Note: only Info Objects are taken into account which have > 1 record in the SID table** 
+
+In total `r nrow(dtMISTXT) ` defects are identified.
+
+The first `r pHEAD` records are shown below, details can be found in the excel.
+`r dtMISTXT[1:pHEAD, .(OLTPSOURCE, IOBJ, S, T, TXTTABFL, A, D)]`
+
+## Info Object Text length ##
+A characteristic info object may have a text table assigned. 
+In total 3 different lengths 
+of text may be available:
+- TXTSH has length 20 
+- TXTMD has length 40
+- TXTLG has length 60
+
+In the Info object there are 3 checkboxes which indicate which columns in the text table
+will be available. 
+
+In case a checkbox is set the column in the text table needs to be filled otherwise
+the end user will get technical keys in case this text length is chosen. 
+
+
+## Empty Text columns ##
+This Quality Assurance check will check all text tables which have > 1 record for empty columns. There shouldn't be any.
+
+
+```{r TXTCOLUMNS, echo=fECHO, eval=TRUE, results=FALSE}
+
+dtRESULT <- do.call(rbind, 
+                    lapply(dtIOBJTAB[RECORDCOUNT > 0 & TABTP == "T"]$TABNAME, 
+                                  fGetTableColUCNT ))
+dtRESULT <- dtRESULT[FIELDNAME != "SYSTID"]
+
+dtRESULT <- dtRESULT[!FIELDNAME %in% lCol, FIELDNAME:= "KEY"]
+dtRESULT <- as.data.table(dcast(dtRESULT, TABLE ~ FIELDNAME, sum, 
+                                value.var = "UCNT", fill = -1))
+
+setcolorder(dtRESULT, c("TABLE", "KEY", "LANGU", "TXTSH", "TXTMD", "TXTLG"))
+
+dtRESULT <- as.data.table(sapply(dtRESULT, as.character))
+dtRESULT <- as.data.table(sapply(dtRESULT, 
+                                 function(x){ifelse(x == "-1", "", x)}))
+
+
+# fWriteToSheet(dtRESULT, 
+#               pPATH, pFILE, "Result", pAppend = TRUE )
+```
+
+```{r TXTCOLS, echo=fECHO, eval=TRUE, results=FALSE}
+vPath   <- "C:/SAPexport"
+dtFILES <- dir(vPath)
+dtFILES <- dtFILES[substr(dtFILES,1,14) %in% c("BP1C300_#BIC#T", "BP1C300_#BI0#T")]
+
+dtDEFECT <- data.table(IOBJT = character(0))
+for (vFILE in dtFILES){
+  dtTMP <- fread(paste0(vPath, "/", vFILE ))
+  dtCNT <- dtTMP[, lapply(.SD, function(x){length(unique(x)) == 1}), 
+                .SDcols=grep("^TXT", names(dtTMP))] 
+  if(any(dtCNT == TRUE)){ dtDEFECT <- rbind(dtDEFECT, data.table(IOBJT =vFILE))}
+  print(vFILE)
+  print(dtCNT)
+  }
+
+View(dtDEFECT)
+```
+
+
