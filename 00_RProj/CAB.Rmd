@@ -1,0 +1,127 @@
+---
+title: "CAB"
+author: "F.J.Padt"
+date: "October 24, 2017"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  eval    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  image   = TRUE,
+  results = "hide")
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# folder locations
+RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
+PRJ  <- file.path(RW  , "QAR")
+MOD  <- file.path(PRJ , "00_RProj")
+RAW  <- file.path(PRJ , "10_RawData")
+DAT  <- file.path(PRJ , "11_PrepData")
+RES  <- file.path(PRJ , "60_Results")
+FIG  <- file.path(PRJ , "70_Figures")
+MIG  <- file.path("C:", "Users", "fpadt", "GrandVision", 
+                  "iSynergy - 70. Migration") 
+
+#source('../pythia/SharedFunctions/GenericFunctions.R')
+invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
+
+dtCR <- fread(file.path(RAW, "cr.csv")) 
+dtCD <- fread(file.path(RAW, "cd.csv"))
+
+dtCR_HDR <- fread(file.path(DAT, "CR_HDR.csv"))
+dtCD_HDR <- fread(file.path(DAT, "CD_HDR.csv"))
+
+# drop useless columns
+dtCR[, dtCR_HDR[NEW == '', OLD] := NULL]
+dtCD[, dtCD_HDR[NEW == '', OLD] := NULL]
+
+# rename remaining columns
+setnames(dtCR, dtCR_HDR[NEW != '', NEW])
+setnames(dtCD, dtCD_HDR[NEW != '', NEW])
+
+# Filter the CRs
+dtBIR3 <- fread(file.path(RAW, "BIR3.txt")) 
+setnames(dtBIR3, "V1", "CR_REQ_ID")
+
+dtCR <- 
+  rbindlist(
+    list(
+      dtCR[substr(CR_CATEGORY,1,5) == "SAP B"],
+      dtCR[dtBIR3, on = .(CR_REQ_ID)]))
+
+# Add Prio
+dtPRIO <- fread(file.path(RAW, "PRIO.csv")) 
+
+dtCR <- dtPRIO[dtCR, on = .(CR_REQ_ID)]
+
+# COmbine 
+dtALL <- dtCD[dtCR, on = .(CD_REQ_ID == CR_REQ_ID)]
+
+dtALL[, `:=`(
+  CR_CR_ON     = dmy(dtALL[, substr(CR_REQ_START, 1, 10)]),
+  CR_REQ_START = dmy(dtALL[, substr(CR_REQ_START, 1, 10)]),
+  CR_REQ_END   = dmy(dtALL[, substr(CR_REQ_END  , 1, 10)]),
+  CR_LCH_ON    = dmy(dtALL[, substr(CR_LCH_ON   , 1, 10)]),
+  CR_DUE_BY    = dmy(dtALL[, substr(CR_DUE_BY   , 1, 10)]),
+  CD_CR_ON     = dmy(dtALL[, substr(CD_CR_ON    , 1, 10)]),
+  CD_REQ_START = dmy(dtALL[, substr(CD_REQ_START, 1, 10)]),
+  CD_REQ_END   = dmy(dtALL[, substr(CD_REQ_END  , 1, 10)]),
+  CD_DUE_BY    = dmy(dtALL[, substr(CD_DUE_BY   , 1, 10)]),
+  CD_LCH_ON    = dmy(dtALL[, substr(CD_LCH_ON   , 1, 10)]))]
+
+# library(readxl)
+dtAMS <- as.data.table(
+  read_excel(file.path(RAW, "AMS_PLAN.xlsx"), 
+    col_types = c("numeric", "date", "date", 
+        "date", "numeric", "numeric", "numeric")))
+
+dtALL <- dtAMS[dtALL, on = .(CR_REQ_ID)]
+
+
+```
+
+```{r  export}
+
+
+# rename remaining columns
+setnames(
+  dtALL, 
+  intersect(names(dtALL), dtCR_HDR$NEW), 
+  dtCR_HDR[NEW %in% intersect(names(dtALL), dtCR_HDR$NEW), OLD])
+
+setnames(
+  dtALL, 
+  intersect(names(dtALL), dtCD_HDR$NEW), 
+  dtCD_HDR[NEW %in% intersect(names(dtALL), dtCD_HDR$NEW), OLD])
+
+
+# Data Settings
+pXLSX    <- "ALL" 
+
+pWSHT    <- TRUE
+
+# Open Excel for storing results
+if (file.exists(paste0(RES, "/", pXLSX, ".xlsx")) == TRUE) {
+  invisible(file.remove(paste0(RES, "/", pXLSX, ".xlsx")))
+}
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtALL, 
+    RES, pXLSX, "ALL", pAppend = FALSE )}
+```
+
+```{r}
+
+
+
+
+```
+

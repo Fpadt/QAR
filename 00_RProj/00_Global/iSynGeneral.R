@@ -78,7 +78,8 @@ fGetEXPTable <- function(pTableName, pKey, pSystID, pClient = "300"){
   }
   
   # set Path
-  cRAWDATA    <- file.path("C:", "Users", "fpadt", "SAPEXPORT")
+  cRAWDATA    <- file.path("C:", "Users", "fpadt", 
+                           "OneDrive - GrandVision", "Documents", "SAPEXPORT")
   cEXT        <- "txt" 
   
   dtTABLE <- as.data.table(

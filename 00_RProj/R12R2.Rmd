@@ -13,6 +13,7 @@ classoption: landscape
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   echo    = FALSE,
+  eval    = TRUE,
   message = FALSE,
   warning = FALSE,
   image   = TRUE,
@@ -29,15 +30,11 @@ MOD  <- file.path(PRJ , "00_RProj")
 DAT  <- file.path(PRJ , "11_PrepData")
 RES  <- file.path(PRJ , "60_Results")
 FIG  <- file.path(PRJ , "70_Figures")
+MIG  <- file.path("C:", "Users", "fpadt", "GrandVision", 
+                  "iSynergy - 70. Migration") 
 
 #source('../pythia/SharedFunctions/GenericFunctions.R')
 invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
-
-# Data Settings
-fECHO    <- TRUE
-fEVAL    <- TRUE
-fRESULTS <- 'hide' 
-fIMAGE   <- TRUE 
 
 # SAP systems to use
 pECC_SYST <- "RP1"
@@ -48,12 +45,13 @@ pLGCINDC  <- "C"
 
 # Data Settings
 pXLSX    <- "R12R2" 
-pINFO    <- file.path(PRJ, "10_RawData", "INFO.xlsx") 
+
+pINFO    <- file.path(MIG, "INFO_MD.xlsx") 
 # note VPN is needed for this doesn't work on internal network
 # pINFO    <- "//grandvision.sharepoint.com/sites/NL1-Proj-iSynergy/05_CoE/90%20BI/INFOtst.xlsx"
 pWSHT    <- TRUE
 newfiles <- TRUE
-SID.lng  <- c("BD1100", "BA1300", "BP1300", "BTP300", "BU1300")
+SID.lng  <- c("BD1100", "BA1300", "BP1300") #, "BTP300", "BU1300")
 SID.sht  <- substr(SID.lng, 1, 3)
 
 dtPATH <- 
@@ -81,82 +79,51 @@ if (!file.exists(gvLOGO_PATH)) {
 }
 knitr::include_graphics(gvLOGO_PATH)
 
-if (newfiles == TRUE) {
-  read_and_union <- function(pTableName){
-    
-    dtReturn <- 
-      do.call(
-        rbind,
-        lapply(as.list(SID.lng), function(x) {
-          fGetEXPTable(
-            pTableName = pTableName,
-            pSystID = substr(x, 1, 3),
-            pClient = substr(x, 4, 6) )
-        }))
-    
-    return(dtReturn)
-  }
-  
-  # read data from MS Access extract
-  dtRSRREPDIR  <- read_and_union("RSRREPDIR")
-  dtRSZCOMPDIR <- read_and_union("RSZCOMPDIR")
-  dtTADIR      <- read_and_union("TADIR")
-  dtUSR02      <- fGetEXPTable(pTableName = "USR02", pSystID = "BP1", pClient = 300)
-  dtUSR21      <- fGetEXPTable(pTableName = "USR21", pSystID = "BP1", pClient = 300)  
-  dtADR6       <- fGetEXPTable(pTableName = "ADR6" , pSystID = "BP1", pClient = 300)  
-  dtAUTH       <- fGetEXPTable(pTableName = "#BIC#AG1AAPD0200"
-                               , pSystID = "BP1", pClient = 300)  
+# First execute the analysis zsANALYSIS-R1R2_MIG
+# Extecute mcrAnalysesExtract
+# C:\Users\fpadt\SAPEXPORT
 
-  # Read data from Local Excel File, note stats need to be refreshed
-  dtCOMM       <- as.data.table(read_excel(path = pINFO, sheet = "C.OMMENT"))
-  dtDSO        <- as.data.table(read_excel(path = pINFO, sheet = "D.SO"))    
-  dtJIRA       <- as.data.table(read_excel(path = pINFO, sheet = "J.IRA"))  
-  dtJIRA       <- as.data.table(read_excel(path = pINFO, sheet = "J.IRA"))  
-  dtMIGR       <- as.data.table(read_excel(path = pINFO, sheet = "M.IGR"))     
-  dtOBJR       <- as.data.table(read_excel(path = pINFO, sheet = "O.BJR"))
-  dtRTST       <- as.data.table(read_excel(path = pINFO, sheet = "R.TST"))  
-  dtSTAT       <- as.data.table(read_excel(path = pINFO, sheet = "S.TAT"))
-  dtTEAM       <- as.data.table(read_excel(path = pINFO, sheet = "T.EAM"))
-  dtUSER       <- as.data.table(read_excel(path = pINFO, sheet = "U.SER"))
-  dtWEBI       <- as.data.table(read_excel(path = pINFO, sheet = "W.EBI"))
+
+read_and_union <- function(pTableName){
   
-  setnames(dtSTAT, c("S.CDAY", "S.COMPID", "S.QDESCR", "S.USER", "S.QEXEC"))
+  dtReturn <- 
+    do.call(
+      rbind,
+      lapply(as.list(SID.lng), function(x) {
+        fGetEXPTable(
+          pTableName = pTableName,
+          pSystID = substr(x, 1, 3),
+          pClient = substr(x, 4, 6) )
+      }))
   
-  write.fst(x = dtRSRREPDIR , path = file.path(DAT, "dtRSRREPDIR.fst"))
-  write.fst(x = dtRSZCOMPDIR, path = file.path(DAT, "dtRSZCOMPDIR.fst"))
-  write.fst(x = dtTADIR     , path = file.path(DAT, "dtTADIR.fst"))
-  write.fst(x = dtUSR02     , path = file.path(DAT, "dtUSR02.fst"))
-  write.fst(x = dtUSR21     , path = file.path(DAT, "dtUSR21.fst"))  
-  write.fst(x = dtADR6      , path = file.path(DAT, "dtADR6.fst"))  
-  write.fst(x = dtSTAT      , path = file.path(DAT, "dtSTAT.fst"))    
-  write.fst(x = dtUSER      , path = file.path(DAT, "dtUSER.fst"))    
-  
-} else {
-  dtRSRREPDIR <- 
-    read.fst(path = file.path(DAT, "dtRSRREPDIR.fst"), 
-             as.data.table = TRUE)
-  dtRSZCOMPDIR <- 
-    read.fst(path = file.path(DAT, "dtRSZCOMPDIR.fst"),
-             as.data.table = TRUE)
-  dtTADIR <- 
-    read.fst(path = file.path(DAT, "dtTADIR.fst"),
-             as.data.table = TRUE)
-  dtUSR02 <- 
-    read.fst(path = file.path(DAT, "dtUSR02.fst"),
-             as.data.table = TRUE)
-  dtUSR21 <- 
-    read.fst(path = file.path(DAT, "dtUSR21.fst"),
-             as.data.table = TRUE)
-  dtADR6 <- 
-    read.fst(path = file.path(DAT, "dtADR6.fst"),
-             as.data.table = TRUE)  
-  dtSTAT <- 
-    read.fst(path = file.path(DAT, "dtSTAT.fst"),
-             as.data.table = TRUE)  
-  dtUSER <- 
-    read.fst(path = file.path(DAT, "dtUSER.fst"),
-             as.data.table = TRUE)    
+  return(dtReturn)
 }
+
+# read data from MS Access extract
+dtRSRREPDIR  <- read_and_union("RSRREPDIR")
+dtRSZCOMPDIR <- read_and_union("RSZCOMPDIR")
+dtTADIR      <- read_and_union("TADIR")
+dtUSR02      <- fGetEXPTable(pTableName = "USR02", pSystID = "BP1", pClient = 300)
+dtUSR21      <- fGetEXPTable(pTableName = "USR21", pSystID = "BP1", pClient = 300)  
+dtADR6       <- fGetEXPTable(pTableName = "ADR6" , pSystID = "BP1", pClient = 300)  
+dtAUTH       <- fGetEXPTable(pTableName = "#BIC#AG1AAPD0200"
+                             , pSystID = "BP1", pClient = 300)  
+
+# Read data from Local Excel File, note stats need to be refreshed
+dtCOMM       <- as.data.table(read_excel(path = pINFO, sheet = "C.OMMENT"))
+dtDSO        <- as.data.table(read_excel(path = pINFO, sheet = "D.SO"))    
+dtJIRA       <- as.data.table(read_excel(path = pINFO, sheet = "J.IRA"))  
+dtOBJR       <- as.data.table(read_excel(path = pINFO, sheet = "O.BJR"))
+dtRTST       <- as.data.table(read_excel(path = pINFO, sheet = "R.TST"))  
+dtSTAT       <- as.data.table(read_excel(path = pINFO, sheet = "S.TAT"))
+dtTEAM       <- as.data.table(read_excel(path = pINFO, sheet = "T.EAM"))
+dtUSER       <- as.data.table(read_excel(path = pINFO, sheet = "U.SER"))
+dtWEBI       <- as.data.table(read_excel(path = pINFO, sheet = "W.EBI"))
+
+# rename columns coming from teh BW statistics
+setnames(dtSTAT, c("S.CDAY", "S.COMPID", "S.QDESCR", "S.USER", "S.QEXEC"))
+
+
 ```
 
 Q0. remove "$"
@@ -184,14 +151,18 @@ dtRSRREPDIR <-
   dtRSRREPDIR[, .(SYSTID    , COMPUID , INFOCUBE, COMPTYPE, COMPID, 
                   RFCSUPPORT, OBJSTAT , READMODE, LASTUSER, MODTIME, 
                   REPTIME   , GEN1TIME, IS_PLANQUERY)]
-setnames(dtRSRREPDIR, paste("B", names(dtRSRREPDIR), sep = "."))
 
 dtRSZCOMPDIR <-
   dtRSZCOMPDIR[, .(SYSTID , COMPUID , COMPID  , OWNER, 
                    ACTIVFL, TIMESTMP, LASTUSED, CREATED)] 
-setnames(dtRSZCOMPDIR, paste("B", names(dtRSZCOMPDIR), sep = "."))
 
-setnames(dtTADIR, paste("B", names(dtTADIR), sep = "."))
+setnames(dtRSRREPDIR,  paste("B", names(dtRSRREPDIR),  sep = "."))
+setnames(dtRSZCOMPDIR, paste("B", names(dtRSZCOMPDIR), sep = "."))
+setnames(dtTADIR,      paste("B", names(dtTADIR),      sep = "."))
+setnames(dtUSR02,      paste("B", names(dtUSR02),      sep = "."))
+setnames(dtUSR21,      paste("B", names(dtUSR21),      sep = "."))
+setnames(dtADR6,       paste("B", names(dtADR6),       sep = "."))
+setnames(dtAUTH,       paste("B", names(dtAUTH),       sep = "."))
 
 dtINFOPROV <- 
   dtOBJR[dtTADIR[, .(B.SYSTID   , B.OBJECT, B.OBJ_NAME, 
@@ -202,6 +173,8 @@ dtINFOPROV <-
 dtINFOPROV <- 
   unique(dtINFOPROV[, .(B.SYSTID, B.OBJ_NAME, B.SRCSYSTEM, 
                         B.AUTHOR, B.DEVCLASS, O.REL_IP )])
+
+dtSTAT[, S.CDAY := format(ymd(S.CDAY), "%d-%m-%Y")]
 
 # Split the Tech Query name in parts and set checks
 dtDIR <- 
@@ -256,36 +229,51 @@ dtDIR <-
              "B.DEVCLASS")    ,
            c("B.OBJ_NAME_IP"  ,
              "B.SRCSYSTEM_IP" , "B.AUTHOR_IP"    ,
-             "B.DEVCLASS_IP"))                               %>%
+             "B.DEVCLASS_IP"))                             %>%
   .[, B.CNT := .N, by = .(B.COMPID)]                          
 
 ```
+
+```{r addAuths}
+dtDIR <- 
+  dtAUTH[B.G1AAOBJ == "QUERY" & B.SYSTID == "BP1",
+           .(B.G1AAGRP, B.G1AAVAL_L)][dtDIR, 
+    on = .(B.G1AAVAL_L == B.COMPID), nomatch = NA ]         %>%
+  .[, B.COMPID := B.G1AAVAL_L ]
+```
+
 
 ```{r COE_COMMENTS}
 
 dtCOE <- 
   dcast.data.table(
-    dtDIR[, .(COMPID, SYSTID)], 
+    dtDIR[, .(B.COMPID, B.SYSTID)], 
     fun.aggregate = length,
-    value.var     = "SYSTID",
-    formula       = COMPID ~ SYSTID)        %>%
-  .[ BD1 == 1 & (BA1 + BP1 + BTP + BU1) == 0, 
+    value.var     = "B.SYSTID",
+    formula       = B.COMPID ~ B.SYSTID)                   %>%
+#  .[ BD1 == 1 & (BA1 + BP1 + BTP + BU1) == 0, 
+#     COE := "CHECK if New/Old Development"]                %>%
+  .[ BD1 == 1 & (BA1 + BP1) == 0, 
      COE := "CHECK if New/Old Development"]                %>%
   .[ (BD1 + BA1) == 2 & (BP1) == 0, 
      COE := "CHECK if new R2 Development"]                 %>%
-  .[ (BD1 + BA1 + BTP + BP1) == 4 & (BU1) == 0, 
-     COE := "TRANSPORT TO BU1"]                            %>%
-  .[ (BTP) == 0 & (BU1) == 1, 
-     COE := "TRANSPORT TO BTP"]                            %>%
-  .[ (BD1 + BA1 + BTP + BP1 + BU1) == 5, 
-     COE := "CHECK to be Authorized"]                      %>%
+#  .[ (BD1 + BA1 + BTP + BP1) == 4 & (BU1) == 0, 
+#     COE := "TRANSPORT TO BU1"]                            %>%
+#  .[ (BTP) == 0 & (BU1) == 1, 
+#     COE := "TRANSPORT TO BTP"]                            %>%
+#  .[ (BD1 + BA1 + BTP + BP1 + BU1) == 5, 
+#     COE := "CHECK to be Authorized"]                      %>%
   .[ BD1 == 0, 
      COE := "DELETE AS NOT in BD1"]                        %>%
   .[ is.na(COE), 
      COE := "CHECK SPECIAL CASE?"]                         %>%
-  .[ substr(COMPID, 1, 1) == "Z", 
+  .[ substr(B.COMPID, 1, 1) == "Z", 
      COE := "DELETE or REBUILD as G/L"]                    %>%
-  .[dtDIR, on = .(COMPID), nomatch = NA]
+  .[dtDIR, on = .(B.COMPID), nomatch = NA]                 %>%
+  .[ (BD1 + BA1 + BP1) == 3 & is.na(B.G1AAGRP), 
+     COE := "CHECK to be Authorized"]                      %>% 
+  .[ (BD1 + BA1 + BP1) == 3 & !is.na(B.G1AAGRP), 
+     COE := "CHECK if Documented"]  
 ```
 
 
@@ -293,35 +281,44 @@ dtCOE <-
 # Set Flag User Status
 
 dtUSR <- 
-  dtUSR21[dtADR6, on = .(SYSTID, MANDT = CLIENT, 
-                         PERSNUMBER, ADDRNUMBER),
+  dtUSR21[dtADR6, on = .(B.SYSTID, B.MANDT = B.CLIENT, 
+                         B.PERSNUMBER, B.ADDRNUMBER),
           nomatch = 0]                                     %>%
-  .[, .(SYSTID, MANDT, BNAME, SMTP_ADDR)]                  %>%
-  .[dtUSR02, on = .(SYSTID, MANDT, BNAME), nomatch = NA]   
+  .[, .(B.SYSTID, B.MANDT, B.BNAME, B.SMTP_ADDR)]          %>%
+  .[dtUSR02, on = .(B.SYSTID, B.MANDT, B.BNAME), 
+    nomatch = NA]   
 
-dtUSR[, USTATE := ifelse(
-  GLTGB >= format( Sys.Date(), format = "%Y%m%d"),
+dtUSR[, B.USTATE := ifelse(
+  B.GLTGB >= format( Sys.Date(), format = "%Y%m%d"),
   "VALID", "INVALID") ]
 
-dtUSR[, USTATE := ifelse(
-  USTATE == "VALID" & UFLAG == "0",
+dtUSR[, B.USTATE := ifelse(
+  B.USTATE == "VALID" & B.UFLAG == "0",
   "VALID", "LOCKED") ]
 
 dtUSR <- 
-  dtUSR[, .(BNAME, SMTP_ADDR, CLASS, USTYP, USTATE)]       %>%
-  .[dtUSER, on = .(CLASS = U.CLASS)]                       %>%
-  .[dtSTAT , on = .(BNAME = USER)]                         %>%
-  .[dtCOE[SYSTID == "BP1"]  , on = .(COMPID)]
+  dtUSR[, .(B.BNAME, B.SMTP_ADDR, 
+            B.CLASS, B.USTYP, B.USTATE)]                   %>%
+  .[dtUSER, on = .(B.CLASS = U.CLASS)]                     %>%
+  .[dtSTAT, on = .(B.BNAME = S.USER)]                      %>%
+  .[dtCOE[B.SYSTID == "BP1"], 
+    on = .(S.COMPID = B.COMPID)]                           %>%
+  .[, `:=`(U.CLASS  = B.CLASS,
+           S.USER   = B.BNAME,
+           B.COMPID = S.COMPID)]
 
 ```
 
 ```{r addInfo}
 dtINFO <-
   dtUSR                                                    %>%
-  dtTEAM[., on = .(OWNER)    , nomatch = NA]               %>%
-  dtWEBI[., on = .(COMPID)   , nomatch = NA, 
+  dtTEAM[., on = .(T.OWNER  == B.OWNER) , nomatch = NA]    %>%
+  dtWEBI[., on = .(W.COMPID == S.COMPID), nomatch = NA, 
          allow.cartesian = TRUE]                           %>%
-  dtCOMM [., on = .(COMPID)   , nomatch = NA]  
+  dtCOMM[., on = .(C.COMPID == W.COMPID), nomatch = NA]    %>%
+  .[, `:=`(B.OWNER  = T.OWNER,
+           S.COMPID = C.COMPID,
+           W.COMPID = C.COMPID)]                
   
 ```
 
@@ -334,6 +331,8 @@ rm(dtADR6     , dtUSR21     , dtUSR02   , dtUSER,
 ```
 
 ```{r ExportTxt}
+setcolorder(dtINFO, sort(names(dtINFO)))
+
 write.table(
   dtINFO,
   file      = file.path(RES, "R12R2.csv"),
