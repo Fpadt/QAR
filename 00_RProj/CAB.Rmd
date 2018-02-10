@@ -63,6 +63,7 @@ dtCR <- dtPRIO[dtCR, on = .(CR_REQ_ID)]
 
 # COmbine 
 dtALL <- dtCD[dtCR, on = .(CD_REQ_ID == CR_REQ_ID)]
+setnames(dtALL, "CD_REQ_ID", "CR_REQ_ID")
 
 dtALL[, `:=`(
   CR_CR_ON     = dmy(dtALL[, substr(CR_REQ_START, 1, 10)]),
@@ -92,14 +93,20 @@ dtALL <- dtAMS[dtALL, on = .(CR_REQ_ID)]
 
 # rename remaining columns
 setnames(
-  dtALL, 
-  intersect(names(dtALL), dtCR_HDR$NEW), 
-  dtCR_HDR[NEW %in% intersect(names(dtALL), dtCR_HDR$NEW), OLD])
-
+  dtALL,
+  intersect(names(dtALL), dtCR_HDR$NEW),
+  dtCR_HDR[NEW %in% intersect(names(dtALL), dtCR_HDR$NEW), 
+            paste("CR", 
+                  gsub(pattern = " ", replacement = "_", OLD),
+                  sep = "_")])
+           
 setnames(
-  dtALL, 
-  intersect(names(dtALL), dtCD_HDR$NEW), 
-  dtCD_HDR[NEW %in% intersect(names(dtALL), dtCD_HDR$NEW), OLD])
+  dtALL,
+  intersect(names(dtALL), dtCD_HDR$NEW),
+  dtCD_HDR[NEW %in% intersect(names(dtALL), dtCD_HDR$NEW), 
+           paste("CD", 
+                 gsub(pattern = " ", replacement = "_", OLD),
+                 sep = "_")])
 
 
 # Data Settings

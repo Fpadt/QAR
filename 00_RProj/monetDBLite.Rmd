@@ -1,0 +1,17 @@
+---
+title: "monetDBLite"
+author: "F.J.Padt"
+date: "January 28, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+[monetDBLite](https://www.monetdb.org/blog/monetdblite-r)
+
+
+```{r}
+install.packages("MonetDBLite")
+```

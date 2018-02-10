@@ -24,7 +24,7 @@ rm(list = ls())
 gc()
 
 # folder locations
-RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "RW")
+RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
 PRJ  <- file.path(RW  , "QAR")
 MOD  <- file.path(PRJ , "00_RProj")
 DAT  <- file.path(PRJ , "11_PrepData")

@@ -1,14 +1,18 @@
 ---
-title: "R Notebook"
-output: html_notebook
-editor_options: 
-  chunk_output_type: inline
+title   : "Quality Assurance Report"
+subtitle: "Authorization"
+author  : "F.J. Padt"
+date: "January 30, 2018"
+output:
+  pdf_document:
+    toc: no
+    toc_depth: 4
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  eval    = TRUE,
   echo    = FALSE,
+  eval    = TRUE,
   message = FALSE,
   warning = FALSE,
   image   = TRUE,
@@ -19,33 +23,26 @@ rm(list = ls())
 gc()
 
 # folder locations
-RW   <- file.path("C:", "Users", "fpadt", 
-                  "OneDrive - GrandVision", "Documents", "RW")
-PRJ  <- file.path(RW  , "QAR")
-MOD  <- file.path(PRJ , "00_RProj")
-DAT  <- file.path(PRJ , "11_PrepData")
-RES  <- file.path(PRJ , "60_Results")
-FIG  <- file.path(PRJ , "70_Figures")
+RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
+PRJ  <- file.path(RW , "QAR")
+MOD  <- file.path(PRJ, "00_RProj")
+DAT  <- file.path(PRJ, "11_PrepData")
+RES  <- file.path(PRJ, "60_Results")
+FIG  <- file.path(PRJ, "70_Figures")
 
-#source('../pythia/SharedFunctions/GenericFunctions.R')
+# Load functions
 invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
-
-# SAP systems to use
-pECC_SYST <- "RP1"
-pECC_CLNT <- "300"
-pBI_SYST  <- "BP1"
-pBI_CLNT  <- "300"
-pLGCINDC  <- "C"
+invisible(source(file.path(MOD, "00_Global", "SAP_LogOn.R")))
 
 # Data Settings
-pXLSX    <- "Auths" 
-# pINFO    <- file.path(PRJ, "10_RawData", "INFO.xlsx") 
+pXLSX    <- "Authorization" 
+
 # note VPN is needed for this doesn't work on internal network
 # pINFO    <- "//grandvision.sharepoint.com/sites/NL1-Proj-iSynergy/05_CoE/90%20BI/INFOtst.xlsx"
 pWSHT    <- TRUE
 newfiles <- TRUE
-SID.lng  <- c("BD1100", "BA1300", "BP1300", "BTP300", "BU1300")
-SID.lng  <- c("BA1300", "BP1300")
+# SID.lng  <- c("BA1300") #, "BTP300", "BU1300")
+SID.lng  <- c("BS1300", "BU1300", "BA1300", "BP1300") #, "BTP300", "BU1300")
 SID.sht  <- substr(SID.lng, 1, 3)
 
 dtPATH <- 
@@ -73,38 +70,113 @@ if (!file.exists(gvLOGO_PATH)) {
 }
 knitr::include_graphics(gvLOGO_PATH)
 
-if (newfiles == TRUE) {
-  read_and_union <- function(pTableName){
-    
-    dtReturn <- 
-      do.call(
-        rbind,
-        lapply(as.list(SID.lng), function(x) {
-          fGetEXPTable(
-            pTableName = pTableName,
-            pSystID = substr(x, 1, 3),
-            pClient = substr(x, 4, 6) )
-        }))
-    
-    return(dtReturn)
-  }
-  
+# First execute the analysis zsANALYSIS-R1R2_MIG
+# Extecute mcrAnalysesExtract
+# C:\Users\fpadt\SAPEXPORT
+# 
+# fRead_and_Union <- function(pTable, pOptions, pFields){
+#   
+#   dtReturn <- 
+#     do.call(
+#       rbind,
+#       lapply(as.list(SID.lng), function(x) {
+#         fReadSAPTable(
+#           pSystID  = substr(x, 1, 3),
+#           pClient  = substr(x, 4, 6),
+#           pTable   = pTable,
+#           pOptions = pOptions,
+#           pFields  = pFields )
+#       }))
+#   
+#   return(dtReturn)
+# }  
+```
+
+# Read Tables
+```{r ReadAuthTables}
+
+SID.lng  <- c("BS1300", "BD1100", "BU1300", "BA1300", "BP1300")
+SID.sht  <- substr(SID.lng, 1, 3)
+
+T1 <- Sys.time()
+
+dtUSGRP <- 
+  fRead_and_Union(
+    pSID.lng = SID.lng,              
+    pTable   = "USGRP", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "USGRP"))
+
+dtUSGRPT <- 
+  fRead_and_Union(
+    pSID.lng = SID.lng,              
+    pTable   = "USGRPT", 
+    pOptions = list("SPRSL = 'E'"),
+    pFields  = fGetFields(pTable = "USGRPT"))
+
+dtUSGRP_USER <-
+  fRead_and_Union(
+    pSID.lng = SID.lng,              
+    pTable   = "USGRP_USER", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "USGRP_USER"))
+
+dtUSR02 <- 
+  fRead_and_Union(
+    pSID.lng = SID.lng,          
+    pTable   = "USR02", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "USR02")[1:14])
+
+dtAGR_USERS <- 
+  fRead_and_Union(
+    pSID.lng = SID.lng,          
+    pTable   = "AGR_USERS", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "AGR_USERS"))
+
+dtUSR21 <- 
+  fRead_and_Union(
+    pSID.lng = SID.lng,          
+    pTable   = "USR21", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "USR21"))
+
+dtADR6 <- 
+  fRead_and_Union(
+    pSID.lng = SID.lng,          
+    pTable   = "ADR6", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "ADR6"))
+# AGR_DEFINE
+
+dtA <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+write.table(
+  dtA, file = "c:/c-temp/test.csv",
+  sep = ";", row.names = FALSE, col.names = TRUE)
+# Error in `[[<-.data.frame`(`*tmp*`, f, value = character(0)) : 
+#   replacement has 0 rows, data has 995
+# 
+# dtAUTH       <- 
+#   fRead_and_Union(
+#     pSID.lng = SID.lng,          
+#     pTable   = "/BIC/AG1AAPD0200", 
+#     pOptions = list(),
+#     pFields  = fGetFields(pTable = "/BIC/AG1AAPD0200"))
+
+```
+
+
+```   
   # read data from MS Access extract
-  dtUSGRP      <- read_and_union("USGRP")
-  dtUSGRPT     <- read_and_union("USGRPT")
-  dtUSGRP_USER <- read_and_union("USGRP_USER")
-  dtUSR02      <- read_and_union("USR02")  
-  dtAGR_USERS  <- read_and_union("AGR_USERS")
-  dtAUTH       <- read_and_union("~BIC~AG1AAPD0200")
+
+
   
-  # load("./11_PrepData/dtDUMMIES.RData")
-#  load("~/RW/QAR/11_PrepData/dtDUMMIES.RData")
-#  load("~/RW/QAR/11_PrepData/dtEMAIL.RData")
-  load("~/RW/QAR/11_PrepData/dtSAPDUMMY.RData")  
+# load("./11_PrepData/dtDUMMIES.RData")
+# load("~/RW/QAR/11_PrepData/dtDUMMIES.RData")
+# load("~/RW/QAR/11_PrepData/dtEMAIL.RData")
+# load("~/RW/QAR/11_PrepData/dtSAPDUMMY.RData")  
   
-  # dtUSR02      <- fGetEXPTable(pTableName = "USR02", pSystID = "BP1", pClient = 300)
-  # dtUSR21      <- fGetEXPTable(pTableName = "USR21", pSystID = "BP1", pClient = 300)  
-  # dtADR6       <- fGetEXPTable(pTableName = "ADR6" , pSystID = "BP1", pClient = 300)  
   # dtAUTH       <- fGetEXPTable(pTableName = "#BIC#AG1AAPD0200"
   #                              , pSystID = "BP1", pClient = 300)  
   

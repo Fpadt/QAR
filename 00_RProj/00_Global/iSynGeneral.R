@@ -19,50 +19,51 @@ library(magrittr  , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 library(fst       , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 # library(forecast)
 # library(fpp)
-# library(RODBC     , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+library(RODBC     , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 
-
+# https://techblog.aimms.com/2014/10/27/installing-32-bit-and-64-bit-microsoft-access-drivers-next-to-each-other/
+# AccessDatabaseEngine_X64.exe /passive
 # ---- ReadingData ----
-# fGetTable <- function(pTable, pKey, pSystID = "BA1", pClient = "200"){
-#   
-#   if(!missing(pSystID)){
-#     l_Table <- paste0(pSystID, "C", pClient, "_", pTable )
-#   } else {
-#     l_Table <- pTable
-#   }
-# 
-#   # Open COnnection to DataBase
-#   A2R    <- odbcConnect("ACCESS2R")
-#   
-#   dtTABLE <- as.data.table(
-#     sqlFetch(A2R, l_Table, 
-#              stringsAsFactors = FALSE)
-#   )
-#   
-#   # Set Key
-#   if(!missing(pKey)){
-#     setkeyv(dtTABLE, pKey)  
-#   }
-#   
-#   # Get Attributes
-#   if(!missing(pSystID)){
-#     dfCMT <- sqlQuery(A2R, 
-#                       paste("SELECT START, DTIME, RECORDCOUNT", 
-#                             "FROM zsDD02_SLCT",
-#                             "WHERE ((SYSTEMID=", 
-#                             paste0("'", pSystID, "'"),  
-#                             ") AND (CLIENT=", 
-#                             pClient, ") AND (TABNAME=", 
-#                             paste0("'", pTable , "'"), 
-#                             "));")) 
-#     
-#     attr(dtTABLE, "RefreshDate")      <- dfCMT[["START"]]
-#     attr(dtTABLE, "RecordsExtracted") <- dfCMT[["RECORDCOUNT"]]
-#   }
-#   close(A2R)
-#   
-#   return(dtTABLE)
-# }
+fGetAccessTable <- function(pTable, pKey, pSystID, pClient){
+
+  if(!missing(pSystID)){
+    l_Table <- paste0(pSystID, "C", pClient, "_", pTable )
+  } else {
+    l_Table <- pTable
+  }
+
+  # Open COnnection to DataBase
+  A2R    <- odbcConnect("ACCESS2R")
+
+  dtTABLE <- as.data.table(
+    sqlFetch(A2R, l_Table,
+             stringsAsFactors = FALSE)
+  )
+
+  # Set Key
+  if(!missing(pKey)){
+    setkeyv(dtTABLE, pKey)
+  }
+
+  # Get Attributes
+  if(!missing(pSystID)){
+    dfCMT <- sqlQuery(A2R,
+                      paste("SELECT START, DTIME, RECORDCOUNT",
+                            "FROM zsDD02_SLCT",
+                            "WHERE ((SYSTEMID=",
+                            paste0("'", pSystID, "'"),
+                            ") AND (CLIENT=",
+                            pClient, ") AND (TABNAME=",
+                            paste0("'", pTable , "'"),
+                            "));"))
+
+    attr(dtTABLE, "RefreshDate")      <- dfCMT[["START"]]
+    attr(dtTABLE, "RecordsExtracted") <- dfCMT[["RECORDCOUNT"]]
+  }
+  close(A2R)
+
+  return(dtTABLE)
+}
 
 
 
@@ -680,3 +681,4 @@ fAlignDS <- function(pDT, pDS, pSystID = "BP1", pClient = "300"){
   return(dtDATA)
   
 }
+

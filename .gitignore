@@ -92,6 +92,8 @@ sympy-plots-for-*.tex/
 # QAR Project
 *.xlsx
 *.pdf
+*.csv
+*.trc
 QAR.Rproj
 # R History
 *.Rhistory
