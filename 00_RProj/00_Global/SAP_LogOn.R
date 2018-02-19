@@ -3,11 +3,11 @@
 
 #### Library ####
 # due to incompatibility of RSAP with reshape2
-if ("reshape2" %in% loadedNamespaces()) {
-  detach("package:reshape2", unload = TRUE)}
+# if ("reshape2" %in% loadedNamespaces()) {
+#   detach("package:reshape2", unload = TRUE)}
 
 library(RSAP      , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
-library(reshape   , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+library(reshape2   , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 library(data.table, verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 library(magrittr  , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 
@@ -82,23 +82,9 @@ fCreateSAPConnection <-
   }
 
 fCloseAllSAPConnections <- function() {
-  lapply(lstCON, FUN = RSAPClose)}
-
-fGetChain <- 
-  function(pSYSTID, pCLIENT, pPROGNAME, pVARIANT){
+  lapply(lstCON, FUN = RSAPClose)
   
-  parms <- list('REPORT' = pPROGNAME, 'VARIANT' = pVARIANT)
-  lcon  <- fGetSAPConnection(pSystId = pSYSTID, pClient = pCLIENT)
-  
-  lCHAIN <- 
-    RSAPInvoke(lcon, "RS_VARIANT_CONTENTS_RFC", parms) %>%
-    .$VALUTAB                                          %>%
-    as.data.table()                                    %>%
-    .[str_trim(SELNAME) == "CHAIN", str_trim(LOW)]  
-  
-  return(lCHAIN)
-  
-}
+  rm(list = c("lstCON", "dtSAP_LOGON"))}
 
 fGetFields <- 
   function(pSYSTID = "BP1", pCLIENT = "300", pTable, pAnalysis){
@@ -220,4 +206,20 @@ fReadDataDictionary <-
       setorder("POSITION")
 
     return(dtRET)
-}
+  }
+
+fGetChain <- 
+  function(pSYSTID, pCLIENT, pPROGNAME, pVARIANT){
+    
+    parms <- list('REPORT' = pPROGNAME, 'VARIANT' = pVARIANT)
+    lcon  <- fGetSAPConnection(pSystId = pSYSTID, pClient = pCLIENT)
+    
+    lCHAIN <- 
+      RSAPInvoke(lcon, "RS_VARIANT_CONTENTS_RFC", parms) %>%
+      .$VALUTAB                                          %>%
+      as.data.table()                                    %>%
+      .[str_trim(SELNAME) == "CHAIN", str_trim(LOW)]  
+    
+    return(lCHAIN)
+    
+  }

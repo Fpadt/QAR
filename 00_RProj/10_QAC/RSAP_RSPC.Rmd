@@ -2,93 +2,41 @@
 title   : "Quality Assurance Report"
 subtitle: "Process Chains Schedule"
 author  : "F.J. Padt"
-date: "January 27, 2018"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
 output:
   pdf_document:
     toc: no
     toc_depth: 4
+classoption: portrait
 ---
 
-# RS_VARIANT_DELETE_RFC
-# RS_CREATE_VARIANT_RFC
-# PRGN_ACTIVITY_GROUP_DELETE
-# ME_USER_CHANGE_PASSWORD
-# EM_GET_NUMBER_OF_ENTRIES
-# BAPI_USER_UNLOCK
-# RS_VARIANT_CONTENTS_RFC
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  echo    = FALSE,
-  eval    = TRUE,
-  message = FALSE,
-  warning = FALSE,
-  image   = TRUE,
-  results = "hide")
+```{r setup}
 
 # Cleanse memory
 rm(list = ls())
 gc()
 
-# folder locations
-RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
-PRJ  <- file.path(RW , "QAR")
-MOD  <- file.path(PRJ, "00_RProj")
-DAT  <- file.path(PRJ, "11_PrepData")
-RES  <- file.path(PRJ, "60_Results")
-FIG  <- file.path(PRJ, "70_Figures")
-
-# Load functions
-invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
-invisible(source(file.path(MOD, "00_Global", "SAP_LogOn.R")))
-
 # Data Settings
 pXLSX    <- "RSPC-Schedule" 
-
-# note VPN is needed for this doesn't work on internal network
-# pINFO    <- "//grandvision.sharepoint.com/sites/NL1-Proj-iSynergy/05_CoE/90%20BI/INFOtst.xlsx"
 pWSHT    <- TRUE
 newfiles <- TRUE
 
-dtPATH <- 
-  data.table(
-    DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
-    PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
-  )
+# KnitR SetUp location
+KS   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
 
-# Open Excel for storing results
-if (file.exists(paste0(RES, "/", pXLSX, ".xlsx")) == TRUE) {
-  invisible(file.remove(paste0(RES, "/", pXLSX, ".xlsx")))
-}
+# Load functions
+invisible(source(KS))
 
-if (pWSHT == TRUE) {
-  fWriteToSheet(
-    dtPATH, 
-    RES, pXLSX, "PATHS", pAppend = FALSE )}
-
-gvLOGO_PATH <- file.path(FIG, "GV_LOGO.png") 
-if (!file.exists(gvLOGO_PATH)) {
-  download.file(
-    url      = "http://www.grandvision.com/img/logoGV.png",
-    destfile = gvLOGO_PATH,
-    mode     = 'wb')
-}
-knitr::include_graphics(gvLOGO_PATH)
-
-# First execute the analysis zsANALYSIS-R1R2_MIG
-# Extecute mcrAnalysesExtract
-# C:\Users\fpadt\SAPEXPORT
-
-  
 ```
 
 ```{r LIS-BW-VB_APPLICATION, eval=FALSE, include=FALSE}
-SID.lng  <- c("RS1300", "RD1120","RU1300", "RA1300", "RP1300")
-SID.sht  <- substr(SID.lng, 1, 3)
+# SID.lng  <- c("RS1300", "RD1120","RU1300", "RA1300", "RP1300")
+# SID.sht  <- substr(SID.lng, 1, 3)
  
 dtLISO <- 
   fRead_and_Union(
-    pSID.lng = SID.lng,
+    pType    = "R",
     pTable   = "TBTCO", 
     pOptions = list("STATUS  = 'S'", "AND", 
                    "JOBNAME  like 'LIS-BW-VB_APPLICATION_%'", "AND",  
@@ -100,7 +48,7 @@ dtLISO <-
                    'AUTHCKMAN'))
 dtLISP <- 
   fRead_and_Union(
-    pSID.lng = SID.lng,
+    pType    = "R",
     pTable   = "TBTCP", 
     pOptions = list("STATUS = 'P'", "AND", 
                     "JOBNAME like 'LIS-BW-VB_APPLICATION_%'"), 
@@ -121,14 +69,14 @@ shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
 
 ```{r CreateSchedule}
 # SID.lng  <- c("BA1300") #, "BTP300", "BU1300")
-SID.lng  <- c("BS1300", "BD1100", "BU1300", "BA1300", "BP1300") 
-SID.sht  <- substr(SID.lng, 1, 3)
+# SID.lng  <- c("BS1300", "BD1100", "BU1300", "BA1300", "BP1300") 
+# SID.sht  <- substr(SID.lng, 1, 3)
 
 T1 <- Sys.time()
 
 dtTBTCO <- 
   fRead_and_Union(
-    pSID.lng = SID.lng ,
+    pType    = "B",
     pTable   = "TBTCO", 
     pOptions = list("(STATUS = 'S' OR STATUS = 'Z')", "AND", 
                     "JOBNAME = 'BI_PROCESS_TRIGGER'"), 
@@ -138,20 +86,11 @@ dtTBTCO <-
                     'PERIODIC' , 'EVENTID'   , 'EVENTPARM',
                     'AUTHCKMAN', 'CALENDARID', 'PRDBEHAV'))
 
-# dtTBTC1 <- 
-#   fRead_and_Union(
-#     pSID.lng = SID.lng ,
-#     pTable   = "TBTCO", 
-#     pOptions = list("(STATUS = 'S' OR STATUS = 'Z')", "AND", 
-#                     "JOBNAME = 'BI_PROCESS_TRIGGER'"), 
-#     pFields  = fGetFields(pSYSTID = "BA1", pCLIENT = "300", pTable = "TBTCO", pAnalysis = "RELEASED"))
-
-
 dtTBTCP <- 
   fRead_and_Union(
-    pSID.lng = SID.lng ,    
+    pType    = "B",
     pTable   = "TBTCP", 
-    pOptions = list("STATUS = 'P'",                   "AND", 
+    pOptions = list("STATUS = 'P'", "AND", 
                     "JOBNAME = 'BI_PROCESS_TRIGGER'"), 
     pFields  = list('JOBNAME' , 'JOBCOUNT', 'STEPCOUNT',
                     'PROGNAME', 'VARIANT' , 
@@ -161,12 +100,8 @@ dtTBTC <-
   dtTBTCO[dtTBTCP, on = .(SYSTID, CLIENT, JOBNAME, JOBCOUNT),
           nomatch = NA]
 
-Sys.time() - T1
-```
+rm(list = c("dtTBTCP", "dtTBTCO"))
 
-## Variants
-
-```{r RS_VARIANT_CONTENTS_RFC}
 dtVAR <- dtTBTC[!is.na(SDLSTRTDT), .(SYSTID, CLIENT, PROGNAME, VARIANT)]
 dtVAR[, CHAIN := " "]
 
@@ -199,6 +134,7 @@ dtSCHED[, SDLSTRTTM := paste(
   substr(SDLSTRTTM, 5, 6),
   sep = ":")]
 
+Sys.time() - T1
 # fCloseAllSAPConnections()
 
 if (pWSHT == TRUE) {
@@ -233,28 +169,28 @@ dtRSPCLOGCHAIN  <-
 
 dtRSPCCHAIN     <- 
   fRead_and_Union(
-    pSID.lng = SID.lng,    
+    pType    = "B",
     pTable   = "RSPCCHAIN",
     pOptions = list("OBJVERS = 'A'"),
     pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCCHAIN"))
 
 dtRSPCCHAINT    <- 
   fRead_and_Union(
-    pSID.lng = SID.lng,    
+    pType    = "B",
     pTable   = "RSPCCHAINT",
     pOptions = list("OBJVERS = 'A'", "AND", "LANGU = 'E'"),
     pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCCHAINT"))
 
 dtRSPCCHAINATTR <- 
   fRead_and_Union(
-    pSID.lng = SID.lng,
+    pType    = "B",
     pTable   = "RSPCCHAINATTR",
     pOptions = list("OBJVERS = 'A'"),
     pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCCHAINATTR"))
 
 dtRSPCTRIGGER   <- 
   fRead_and_Union(
-    pSID.lng = SID.lng,
+    pType    = "B",
     pTable   = "RSPCTRIGGER",
     pOptions = list("OBJVERS = 'A'"),
     pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCTRIGGER"))
@@ -286,7 +222,7 @@ shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
 ```{r dtZDB_CA_GV001}
 dtZDB_CA_GV001 <- 
     fRead_and_Union(
-    pSID.lng = c("RS1300", "RD1120", "RU1300", "RA1300", "RP1300"), 
+    pType    = "R",
     pTable   = "ZDB_CA_GV001",
     pOptions = list(),
     pFields  = fGetFields(pSYSTID = "RP1", pCLIENT = "300", pTable = "ZDB_CA_GV001"))
@@ -299,35 +235,39 @@ shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
 ```
 
 
+## Transports
+Check the failures
 
 ```{r Transport}
-# SID.lng  <- c("BA1300") #, "BTP300", "BU1300")
 SID.lng  <- c("BA1300", "BP1300")
 SID.sht  <- substr(SID.lng, 1, 3)
 
+# 4 minutes
 T1 <- Sys.time()
 
 dtTPALOG <- 
   fRead_and_Union(
+    pSIDCLNT = SID.lng,
     pTable   = "TPALOG", 
     pOptions = list("TRSTEP = 'R'", "AND", "TRKORR like 'BD%'"), 
     pFields  = fGetFields(pTable = "TPALOG"))
 
 dtE070 <- 
   fRead_and_Union(
+    pSIDCLNT = SID.lng,    
     pTable   = "E070", 
     pOptions = list("TRKORR like 'BD%'"), 
     pFields  = fGetFields(pTable = "E070"))
 
 dtE071 <- 
   fRead_and_Union(
+    pSIDCLNT = SID.lng,    
     pTable   = "E071", 
     pOptions = list("TRKORR like 'BD%'"), 
     pFields  = fGetFields(pTable = "E071"))
 
 Sys.time() - T1
 ```
-
 
 ```{r}
 # Open a specific workbook in Excel:
@@ -344,7 +284,6 @@ Sys.time() - T1
 # # Release resources:
 # rm(xlWbk, xlApp)
 ```
-
 
 ## Rescheduling
 
@@ -417,17 +356,13 @@ parms <- list('JOBCOUNT'           = '23130600',
 res <- RSAPInvoke(conn, "BAPI_XBP_JOB_READ", parms)
 
 
-
-
-
 ```
 
 
-```{r}
+```{r Pythia}
 
-lSystID <- "BU1"
+lSystID <- "BP1"
 
-# OK in BU1
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -435,7 +370,6 @@ dtTXT <-
     pTable    = "/BI0/TGENDER", 
     pOptions  = list("LANGU = 'E'"))
 
-# troubles some warnings not all records
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -443,7 +377,6 @@ dtTXT <-
     pTable    = "/BI0/TMATERIAL", 
     pOptions  = list("LANGU = 'E'"))
 
-# OK in BU1
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -451,7 +384,6 @@ dtTXT <-
     pTable    = "/BI0/TMATL_GROUP", 
     pOptions  = list("LANGU = 'E'"))
 
-# OK in BU1
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -459,7 +391,6 @@ dtTXT <-
     pTable    = "/BI0/TRF_BNDID", 
     pOptions  = list("LANGU = 'E'"))
 
-# ok in BU1
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -467,7 +398,6 @@ dtTXT <-
     pTable    = "/BI0/TVAL_CLASS", 
     pOptions  = list("LANGU = 'E'"))
 
-# error
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -475,7 +405,6 @@ dtTXT <-
     pTable    = "/BIC/TG1BRNDTY", 
     pOptions  = list("LANGU = 'E'"))
 
-# troubles
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -483,7 +412,6 @@ dtTXT <-
     pTable    = "/BIC/TG1COLOR", 
     pOptions  = list("LANGU = 'E'"))
 
-# troubles
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -505,7 +433,6 @@ dtTXT <-
     pTable    = "/BIC/TG1MATRIAL", 
     pOptions  = list("LANGU = 'E'"))
 
-# BU1 error
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
@@ -513,40 +440,90 @@ dtTXT <-
     pTable    = "/BIC/TG1MATYP", 
     pOptions  = list("LANGU = 'E'"))
 
-# BU1 error
 dtTXT <- 
   fReadSAPTable(
     pSystID   = lSystID, 
     pClient   = "300", 
     pTable    = "/BIC/TG1RIM", 
     pOptions  = list("LANGU = 'E'"))
+
+dtQ12 <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/AG1SDPD2200", 
+    pOptions  = list("CALDAY LIKE '201712%'", "AND",
+                     "BILL_TYPE = 'FP'", "AND",
+                     "(MATL_GROUP = '130131' OR MATL_GROUP = '140141')"),
+    pFields   = list('CALDAY', 'MATERIAL', 'PLANT', 'RET_ITM', 'BILL_QTY'))
+
+dtQ01 <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/AG1SDPD2200", 
+    pOptions  = list("CALDAY LIKE '201801%'", "AND",
+                     "BILL_TYPE = 'FP'", "AND",
+                     "(MATL_GROUP = '130131' OR MATL_GROUP = '140141')"),
+    pFields   = list('CALDAY', 'MATERIAL', 'PLANT', 'RET_ITM', 'BILL_QTY'))
+
+dtQ02 <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/AG1SDPD2200", 
+    pOptions  = list("CALDAY LIKE '201802%'", "AND",
+                     "BILL_TYPE = 'FP'", "AND",
+                     "(MATL_GROUP = '130131' OR MATL_GROUP = '140141')"),
+    pFields   = list('CALDAY', 'MATERIAL', 'PLANT', 'RET_ITM', 'BILL_QTY'))
+
+T1 <- Sys.time()
+dtQGI <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/AG1IMPD132", 
+    pOptions  = list("PLANT = 'G001'",       "AND",
+                     "MOVE_PLANT <> 'G001'", "AND",
+                     "MOVE_PLANT <> 'G030'", "AND",
+                     "MOVE_PLANT <> 'G040'"),                     
+    pFields   = list('CALDAY', 'MATERIAL', 'MOVE_PLANT', 'MOVETYPE', 'QUANT_B'))
+Sys.time() - T1
+
+dtQGI_1 <- dtQGI %>%
+  .[MOVETYPE %in% c("641", "643", "901", "910")] %>%
+  .[, QUANT_B := fChar2Num(QUANT_B)]
+
+
 ```
 
 [SAP Note](https://launchpad.support.sap.com/#/notes/1649901)
 ```{r Upgrade PSEUDO_D_AFTER_IMPORT_D }
 dtRSADMIN   <- 
   fRead_and_Union(
-    pSID.lng = c("BS1300", "BD1100", "BU1300", "BA1300", "BP1300"),
+    pType = "B",
     pTable   = "RSADMIN",
     pOptions = list(),
     pFields  = fGetFields(pSYSTID = "BP1", 
                           pCLIENT = "300", 
                           pTable  = "RSADMIN")) 
 
-View(dtRSADMIN[OBJECT == "PSEUDO_D_AFTER_IMPORT_D", .(SYSTID, CLIENT, OBJECT, VALUE)])
+View(dtRSADMIN[OBJECT == "PSEUDO_D_AFTER_IMPORT_D"  , .(SYSTID, CLIENT, OBJECT, VALUE)])
+View(dtRSADMIN[OBJECT == "BW_NO_AGGRJOIN_@3G1GLMP02", .(SYSTID, CLIENT, OBJECT, VALUE)])
 ```
 
 ```{r USER}
+
 # [06-Feb-18 12:20]  Jeroen Jung:  
-DDIF_FIELDINFO_GET 
+# DDIF_FIELDINFO_GET 
  
 
-SID.lng  <- c("BS1300", "BD1100","BU1300", "BA1300", "BP1300")
-SID.sht  <- substr(SID.lng, 1, 3)
+# SID.lng  <- c("BS1300", "BD1100","BU1300", "BA1300", "BP1300")
+# SID.sht  <- substr(SID.lng, 1, 3)
  
 dtUSR02 <- 
   fRead_and_Union(
-    pSID.lng = SID.lng,
+    pType    = "B",
     pTable   = "USR02", 
     pOptions = list(), 
     pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "USR02")[1:14])

@@ -1,0 +1,161 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Authorization"
+author  : "F.J. Padt"
+date: "January 30, 2018"
+output:
+  pdf_document:
+    toc: no
+    toc_depth: 4
+---
+
+```{r setup}
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# Data Settings
+pXLSX    <- "Authorization" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+# Read Tables
+```{r ReadAuthTables}
+
+T1 <- Sys.time()
+
+dtUSGRP <- 
+  fRead_and_Union(
+    pType   = "B", 
+    pTable  = "USGRP",
+    pOptions = list(),
+    pFields = fGetFields(pTable = "USGRP"))
+
+dtUSGRPT <- 
+  fRead_and_Union(
+    pType   = "B", 
+    pTable   = "USGRPT", 
+    pOptions = list("SPRSL = 'E'"),
+    pFields  = fGetFields(pTable = "USGRPT"))
+
+dtUSGRP_USER <-
+  fRead_and_Union(
+    pType   = "B", 
+    pTable   = "USGRP_USER", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "USGRP_USER"))
+
+dtUSR02 <- 
+  fRead_and_Union(
+    pType   = "B", 
+    pTable   = "USR02", 
+    pOptions = list(),
+    pFields  = list(
+      'MANDT'   , 'ANAME'     , 'BNAME', 'ERDAT', 
+      'TRDAT'   , 'LTIME'     , 'GLTGV', 'GLTGB', 
+      'USTYP'   , 'CLASS'     , 'LOCNT', 'UFLAG',
+      'PWDSTATE', 'PWDINITIAL', 'PWDLOCKDATE'))
+
+dtAGR_USERS <- 
+  fRead_and_Union(
+    pType   = "B", 
+    pTable   = "AGR_USERS", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "AGR_USERS"))
+
+dtUSR21 <- 
+  fRead_and_Union(
+    pType   = "B", 
+    pTable   = "USR21", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "USR21"))
+
+dtADR6 <- 
+  fRead_and_Union(
+    pType   = "B", 
+    pTable   = "ADR6", 
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "ADR6"))
+# AGR_DEFINE
+
+# 
+dtAUTH       <-
+  fRead_and_Union(
+    pSIDCLNT = c("BP1300", "BA1300"),
+    pTable   = "/BIC/AG1AAPD0200",
+    pOptions = list(),
+    pFields  = fGetFields(pTable = "/BIC/AG1AAPD0200"))
+
+dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+write.table(
+  dtRES, file = "c:/c-temp/RES.csv",
+  sep = ";", row.names = FALSE, col.names = TRUE)
+
+write.table(
+  dtAUTH, file = "c:/c-temp/auth.csv",
+  sep = ";", row.names = FALSE, col.names = TRUE)
+
+ shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
+ 
+# Error in `[[<-.data.frame`(`*tmp*`, f, value = character(0)) : 
+#   replacement has 0 rows, data has 995
+
+
+```
+
+
+```   
+  # read data from MS Access extract
+
+
+  
+# load("./11_PrepData/dtDUMMIES.RData")
+# load("~/RW/QAR/11_PrepData/dtDUMMIES.RData")
+# load("~/RW/QAR/11_PrepData/dtEMAIL.RData")
+# load("~/RW/QAR/11_PrepData/dtSAPDUMMY.RData")  
+  
+  # dtAUTH       <- fGetEXPTable(pTableName = "#BIC#AG1AAPD0200"
+  #                              , pSystID = "BP1", pClient = 300)  
+  
+  # Read data from Local Excel File, note stats need to be refreshed
+  # dtCOMM       <- as.data.table(read_excel(path = pINFO, sheet = "C.OMMENT"))
+  
+ } 
+
+```
+
+```{r}
+dtUSR <- 
+  dtUSR02[USTYP == "A", 
+          .(SYSTID, MANDT, BNAME, GLTGB, CLASS, UFLAG,
+            TRDAT, PWDSTATE, PWDINITIAL, PWDLOCKDATE )]        %T>%
+  setnames(c("GLTGB"), c("USR_GLTGB"))
+
+dtUSR_GRP <- 
+  dtUSGRP_USER[, .(SYSTID, MANDT, BNAME, USERGROUP)]
+
+dtUSR_AGR <- 
+  dtAGR_USERS[, .(SYSTID, MANDT, AGR_NAME, UNAME, TO_DAT)]     %T>%
+  setnames(c("TO_DAT"), c("AGR_TO_DAT"))
+
+dtAUTH <- 
+  dtUSR                                                        %>%
+  .[dtSAPDUMMY, on = .(BNAME)]                                 %>%
+  dtUSR_AGR[., on = .(SYSTID, MANDT, UNAME = BNAME)]           %>%
+  dtUSR_GRP[., on = .(SYSTID, MANDT, BNAME = UNAME)]
+
+fWriteToSheet(
+  dtAUTH, RES, pXLSX, "Auth", pAppend = FALSE )
+
+```
+
