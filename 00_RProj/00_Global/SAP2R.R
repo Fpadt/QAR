@@ -162,7 +162,7 @@ fGetSAPLogon <-
     
     # Load connection parameters
     if (!exists(x = "dtSAP_LOGON")) {
-      load(file = file.path(DAT, "SAP_LOGON.RData"))
+      load(file = file.path(SAP, "SAP_LOGON.RData"))
     }    
     
     dtSAP_LOGON <<- dtSAP_LOGON
