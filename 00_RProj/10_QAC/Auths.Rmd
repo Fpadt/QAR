@@ -91,10 +91,19 @@ dtADR6 <-
 # 
 dtAUTH       <-
   fRead_and_Union(
-    pSIDCLNT = c("BP1300", "BA1300"),
-    pTable   = "/BIC/AG1AAPD0200",
+    pSIDCLNT = c("BU1300", "BA1300"),
+    pTable   = "/BIC/AG1AAPD222",
     pOptions = list(),
-    pFields  = fGetFields(pTable = "/BIC/AG1AAPD0200"))
+    pFields  = list(
+      '/BIC/G1AAGRP', 
+      '/BIC/G1AAOBJ',
+      '/BIC/G1AAOPT', 
+      '/BIC/G1AASIGN',
+      '/BIC/G1AAVAL_H',
+      '/BIC/G1AAVAL_L', 
+      '/BIC/G1COUNT',
+      'RECORDMODE'
+    ))
 
 dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
 write.table(
@@ -105,7 +114,7 @@ write.table(
   dtAUTH, file = "c:/c-temp/auth.csv",
   sep = ";", row.names = FALSE, col.names = TRUE)
 
- shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
+ # shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
  
 # Error in `[[<-.data.frame`(`*tmp*`, f, value = character(0)) : 
 #   replacement has 0 rows, data has 995
