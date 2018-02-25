@@ -1,0 +1,130 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Incidents and RFCs"
+author  : "F.J. Padt"
+date: "January 27, 2018"
+output:
+  pdf_document:
+    toc: no
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  eval    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  image   = TRUE,
+  results = "hide")
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# folder locations
+RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
+PRJ  <- file.path(RW , "QAR")
+MOD  <- file.path(PRJ, "00_RProj")
+DAT  <- file.path(PRJ, "11_PrepData")
+RES  <- file.path(PRJ, "60_Results")
+FIG  <- file.path(PRJ, "70_Figures")
+
+# Load functions
+invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
+invisible(source(file.path(MOD, "00_Global", "SAP_LogOn.R")))
+
+# Data Settings
+pXLSX    <- "RSPC-Schedule" 
+
+# note VPN is needed for this doesn't work on internal network
+# pINFO    <- "//grandvision.sharepoint.com/sites/NL1-Proj-iSynergy/05_CoE/90%20BI/INFOtst.xlsx"
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+dtPATH <- 
+  data.table(
+    DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
+    PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
+  )
+
+# Open Excel for storing results
+if (file.exists(paste0(RES, "/", pXLSX, ".xlsx")) == TRUE) {
+  invisible(file.remove(paste0(RES, "/", pXLSX, ".xlsx")))
+}
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtPATH, 
+    RES, pXLSX, "PATHS", pAppend = FALSE )}
+
+gvLOGO_PATH <- file.path(FIG, "GV_LOGO.png") 
+if (!file.exists(gvLOGO_PATH)) {
+  download.file(
+    url      = "http://www.grandvision.com/img/logoGV.png",
+    destfile = gvLOGO_PATH,
+    mode     = 'wb')
+}
+knitr::include_graphics(gvLOGO_PATH)
+
+# First execute the analysis zsANALYSIS-R1R2_MIG
+# Extecute mcrAnalysesExtract
+# C:\Users\fpadt\SAPEXPORT
+
+  
+```
+
+```{r Incidents}
+lstINC <- list()
+lstINC[[1]] <- fread("./10_RawData/inc01.csv")
+lstINC[[2]] <- fread("./10_RawData/inc03.csv")
+lstINC[[3]] <- fread("./10_RawData/inc05.csv")
+lstINC[[4]] <- fread("./10_RawData/inc07.csv")
+lstINC[[5]] <- fread("./10_RawData/inc09.csv")
+lstINC[[6]] <- fread("./10_RawData/inc11.csv")
+
+dtINC <- 
+  rbindlist(lstINC)
+
+idx <- grepl(pattern = "SAP BW", x = dtINC$Category) |
+       grepl(pattern = "SAP BO", x = dtINC$Category)
+dtBW <- dtINC[idx]
+
+names(dtBW) <- 
+  gsub(pattern = " ", replacement = "_", x = names(dtBW))
+
+dtBW[, STR := dmy(Created_On)]
+dtBW[, END := dmy(Last_Changed_on)]
+dtBW[, DUR := END - STR]
+dtBW[, MTH := month(END)]
+dtA <- dtBW[, .(AVG = mean(END - STR), QTY = .N), by = .(MTH)]
+write.table(dtA, "dtA.csv", sep = ";")
+```
+
+```{r RFCs}
+lstRFC <- list()
+lstRFC[[1]] <- fread("./10_RawData/CR_Q1.csv")
+lstRFC[[2]] <- fread("./10_RawData/CR_Q2.csv")
+lstRFC[[3]] <- fread("./10_RawData/CR_Q3.csv")
+lstRFC[[4]] <- fread("./10_RawData/CR_Q4.csv")
+
+dtRFC <- 
+  rbindlist(lstRFC)
+
+idx <- grepl(pattern = "SAP BW", x = dtRFC$Category) |
+       grepl(pattern = "SAP BO", x = dtRFC$Category)
+dtBW <- dtRFC[idx]
+
+names(dtBW) <- 
+  gsub(pattern = " ", replacement = "_", x = names(dtBW))
+
+dtBW[, STR := dmy(substr(Created_On, 1, 10))]
+dtBW[, END := dmy(Last_Changed_on)]
+dtBW[, DUR := END - STR]
+dtBW[, MTH := month(END)]
+dtBW[, .(AVG = mean(END - STR), QTY = .N)]
+dtR <- dtBW[, .(AVG = mean(END - STR), QTY = .N), by = .(MTH)]
+write.table(dtR, "dtR.csv", sep = ";")
+write.table(dtBW, "dtBW.csv", sep = ";")
+write.table(dtRFC, "dtRFC.csv", sep = ";")
+```

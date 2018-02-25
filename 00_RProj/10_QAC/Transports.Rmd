@@ -1,0 +1,107 @@
+---
+title: "Transports"
+author: "F.J.Padt"
+date: "7 mei 2016"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  eval    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  image   = TRUE,
+  results = "hide")
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# folder locations
+RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
+PRJ  <- file.path(RW  , "QAR")
+MOD  <- file.path(PRJ , "00_RProj")
+DAT  <- file.path(PRJ , "11_PrepData")
+RES  <- file.path(PRJ , "60_Results")
+FIG  <- file.path(PRJ , "70_Figures")
+MIG  <- file.path("C:", "Users", "fpadt", "GrandVision", 
+                  "iSynergy - 70. Migration") 
+
+#source('../pythia/SharedFunctions/GenericFunctions.R')
+invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
+
+# SAP systems to use
+# pECC_SYST <- "RP1"
+# pECC_CLNT <- "300"
+pBI_SYST  <- "BP1"
+pBI_CLNT  <- "300"
+pLGCINDC  <- "C"
+
+# Data Settings
+pXLSX    <- "Transports" 
+
+# pINFO    <- file.path(MIG, "INFO_MD.xlsx") 
+# note VPN is needed for this doesn't work on internal network
+# pINFO    <- "//grandvision.sharepoint.com/sites/NL1-Proj-iSynergy/05_CoE/90%20BI/INFOtst.xlsx"
+pWSHT    <- TRUE
+newfiles <- TRUE
+# SID.lng  <- c("BD1100", "BA1300", "BP1300") #, "BTP300", "BU1300")
+# SID.sht  <- substr(SID.lng, 1, 3)
+
+dtPATH <- 
+  data.table(
+    DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
+    PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
+  )
+
+# Open Excel for storing results
+if (file.exists(paste0(RES, "/", pXLSX, ".xlsx")) == TRUE) {
+  invisible(file.remove(paste0(RES, "/", pXLSX, ".xlsx")))
+}
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtPATH, 
+    RES, pXLSX, "PATHS", pAppend = FALSE )}
+
+gvLOGO_PATH <- file.path(FIG, "GV_LOGO.png") 
+if (!file.exists(gvLOGO_PATH)) {
+  download.file(
+    url      = "http://www.grandvision.com/img/logoGV.png",
+    destfile = gvLOGO_PATH,
+    mode     = 'wb')
+}
+knitr::include_graphics(gvLOGO_PATH)
+
+
+```{r}
+dtTPALOG <- 
+  fGetEXPTable(pTableName = "TPALOG", pSystID = "BP1") 
+               # pKey = c("JOBNAME", "JOBCOUNT", "STEPCOUNT"))
+dtE070   <- 
+  fGetEXPTable(pTableName = "E070", pSystID = "BP1")
+dtE071   <- 
+  fGetEXPTable(pTableName = "E071", pSystID = "BP1")
+                        # pKey = c("JOBNAME", "JOBCOUNT", "STEPCOUNT"))
+
+dtE07 <- dtE070[dtE071, on = .(SYSTID, TRKORR)]
+
+# dtALL <- dtTPALOG[dtE07, on = .(SYSTID, TRKORR)] 
+dtTPALOG[, TRDATE := ymd(substr(TRTIME, 1, 8))] 
+```
+
+```{r}
+dtTPA01 <- 
+  dtTPALOG[TRSTEP == "R"]                %>%
+  .[, .N, by = .(year(TRDATE), RETCODE)] %>%
+  dcast.data.table(
+    data = ., 
+    formula = year ~ RETCODE,
+    fun.aggregate = sum,
+    value.var = "N")
+
+  fWriteToSheet(dtTPA01, 
+                RES, pXLSX, "Year", pAppend = FALSE )    
+```

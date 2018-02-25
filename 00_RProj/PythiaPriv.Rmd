@@ -1,0 +1,1227 @@
+---
+title: "Pyhtia Priv"
+author: "F.J.Padt"
+date: "6 oktober 2016".
+output: pdf_document
+---
+
+```{r setup}
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# Data Settings
+pXLSX    <- "RSPC-Schedule" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+pBI_SYST <- "BP1"
+
+# KnitR SetUp location
+KS   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+#Functions#
+
+```{r Pythia_Functions}
+
+fGetABC <- function(dtX, aggChar="ART"){
+  
+  Ap <- .80
+  Bp <- .95
+  mc <- brewer.pal(3,"Blues")
+  
+    
+  l_x <- dtX[, .(Q=sum(Q), .N), by=aggChar][order(-Q)]
+  l_x[, Np := 1/nrow(l_x)]
+  l_x[, Qp := Q/sum(l_x$Q)]
+  l_x[, cNp:= cumsum(Np)]
+  l_x[, cQp:= cumsum(Qp)]
+  l_x[cQp > 0  & cQp <= Ap , CLASS:= "A"]
+  l_x[cQp > Ap & cQp <= Bp , CLASS:= "B"]
+  l_x[cQp > Bp & cQp <= Inf, CLASS:= "C"]
+  
+  GG <- ggplot(data=l_x, aes(x=cNp, y=cQp)) + 
+    geom_ribbon(data=l_x[CLASS == "A"], 
+                aes(x=cNp, ymin=0, ymax=cQp), 
+                col="white", fill=mc[1], size=.5, linetype=2 ) +
+    geom_ribbon(data=l_x[CLASS == "B"], 
+                aes(x=cNp, ymin=0, ymax=cQp), 
+                col="white", fill=mc[2], size=.5, linetype=2) +
+    geom_ribbon(data=l_x[CLASS == "C"], 
+                aes(x=cNp, ymin=0, ymax=cQp), 
+                col="white", fill=mc[3], size=.5, linetype=2) +
+    geom_line(col="black", size=1) +
+    scale_x_continuous(labels=percent, breaks=seq(0, 1, .1)) +
+    scale_y_continuous(labels=percent, breaks=seq(0, 1, .1))
+  
+  print(GG)  
+  
+  return(l_x)
+}
+
+# Function   : fABC_MAT ----
+# Purpose    : Add ABC Classification
+#
+# Parameters : 
+#   dataframe: 
+#
+# Returns    : dataframe 
+fABC_MAT <-function(dfSLS){
+  
+  PH              <- as.factor(dfSLS$PH1T)
+  txtTitle        <- character(0)
+  for (i in 1:length(levels(PH))) {
+    txtTitle <- paste(txtTitle,levels(PH)[i], sep=" ")
+  }
+  
+  dfTMP           <- aggregate(dfSLS$Q,
+                               by=list(dfSLS$MAT,dfSLS$MATT),"sum")
+  colnames(dfTMP) <- c("MAT","MATT","Q")
+  
+  dfTMP$sumQ      <- sum(dfTMP$Q)
+  dfTMP$perQ      <- 100*dfTMP$Q/dfTMP$sumQ
+  dfTMP           <- dfTMP[order(dfTMP$perQ, decreasing=TRUE),]
+  dfTMP$cumperQ   <- cumsum(dfTMP$perQ)
+  
+  dfTMP$perC      <- 100*1/length(dfTMP$MAT)
+  dfTMP$cumperC   <- cumsum(dfTMP$perC)
+  
+  dfTMP$CLASS     <- ifelse(dfTMP$cumperQ <= 80,
+                            "A",
+                            ifelse(dfTMP$cumperQ >= 95,
+                                   "C","B"))
+  
+  plot(cumperQ ~ cumperC, data = dfTMP, type="l", col = "red",
+       axes = F, xlab = NA, ylab = NA)
+  
+  base             <- min(dfTMP$cumperQ)
+  perArticles      <- max(dfTMP[dfTMP$CLASS=="A",]$cumperC)
+  abline(v   = perArticles, 
+         h   = 80,
+         col = "lightgray", lty=3, lwd=3)
+  text(perArticles,base,
+       labels=ceiling(length(dfTMP$MAT)*perArticles/100))
+  
+  perArticles      <- min(dfTMP[dfTMP$CLASS=="C",]$cumperC)
+  abline(v   = perArticles, 
+         h   = 95,
+         col = "gray", lty=3, lwd=3)
+  text(perArticles,base,
+       labels=ceiling(length(dfTMP$MAT)*perArticles/100))  
+  
+  text(100,base,
+       labels=length(dfTMP$MAT))
+  
+  
+  box()
+  axis(side  = 1, tck = -.015, labels = NA)
+  axis(side  = 2, tck = -.015, labels = NA)
+  axis(side  = 1, lwd = 0              , line = -.4)
+  axis(side  = 2, lwd = 0              , line = -.4, las = 1)
+  mtext(side = 1, "% of Articles"      , line = 2)
+  mtext(side = 2, "% of Total Quantity", line = 2)
+  mtext(side = 3, txtTitle             , line = 2)
+  return(dfTMP)
+}
+
+# Function   : fABC_MATPLANT ----
+# Purpose    : Add ABC Classification to MATPLANT
+#
+# Parameters : 
+#   dataframe: 
+#
+# Returns    : dataframe 
+fABC_MATPLANT <-function(dfSLS, txtTitle="Dist. by Quantity"){
+  
+  # Generate the Title
+  #   PH              <- as.factor(dfSLS$PH1)
+  #   txtTitle        <- character(0)
+  #   for (i in 1:length(levels(PH))) {
+  #     txtTitle <- paste(txtTitle,levels(PH)[i], sep=" ")
+  #   }
+  
+  dfTMP           <- aggregate(dfSLS$Q,
+                               by=list(STORE=dfSLS$STORE, MAT=dfSLS$MAT),"sum")
+  
+  colnames(dfTMP) <- c("STORE","MAT","Q")
+  
+  dfTMP$sumQ      <- sum(dfTMP$Q)
+  dfTMP$perQ      <- 100*dfTMP$Q/dfTMP$sumQ
+  dfTMP           <- dfTMP[order(dfTMP$perQ, decreasing=TRUE),]
+  dfTMP$RANK      <- 1:nrow(dfTMP)
+  dfTMP$cumperQ   <- cumsum(dfTMP$perQ)
+  
+  dfTMP$perC      <- 100*1/length(dfTMP$MAT)
+  dfTMP$cumperC   <- cumsum(dfTMP$perC)
+  
+  dfTMP$CLASS     <- ifelse(dfTMP$cumperQ <= 80,
+                            "A",
+                            ifelse(dfTMP$cumperQ >= 95,
+                                   "C","B"))
+  #Q   
+  plot(cumperQ ~ cumperC, data = dfTMP, type="h", col = "blue",
+       axes = F, xlab = NA, ylab = NA)
+  lines(sumQ ~ cumperC, data = dfTMP, type="l", col="blue")
+  
+  base             <- min(dfTMP$cumperQ)
+  perArticles      <- max(dfTMP[dfTMP$CLASS=="A",]$cumperC)
+  abline(v   = perArticles, 
+         h   = 80,
+         col = "lightgray", lty=3, lwd=3)
+  text(perArticles,base,
+       labels=ceiling(length(dfTMP$MAT)*perArticles/100))
+  
+  perArticles      <- min(dfTMP[dfTMP$CLASS=="C",]$cumperC)
+  abline(v   = perArticles, 
+         h   = 95,
+         col = "gray", lty=3, lwd=3)
+  text(perArticles,base,
+       labels=ceiling(length(dfTMP$MAT)*perArticles/100))  
+  
+  text(100,base,
+       labels=length(dfTMP$MAT))
+  
+  
+  box()
+  axis(side  = 1, tck = -.015, labels = NA)
+  axis(side  = 2, tck = -.015, labels = NA)
+  axis(side  = 1, lwd = 0              , line = -.4)
+  axis(side  = 2, lwd = 0              , line = -.4, las = 1)
+  mtext(side = 1, "% of Allocations"      , line = 2)
+  mtext(side = 2, "% of Total Quantity", line = 2)
+  mtext(side = 3, txtTitle             , line = 2)
+  
+  dfTMP <- dfTMP[ , c("STORE", "MAT", "CLASS", "RANK", "Q")]  
+  names(dfTMP)[names(dfTMP) == "Q"] <- "sumQ"  
+  
+  return(dfTMP)
+}
+```
+
+\newpage
+![Logo][gvLOGO_PATH]
+
+#Master Data#
+
+##Article##
+
+```{r Article (datARTG)}
+# source('~/QAR/00_RProj/00_Global/iSynGeneral.R')
+
+# loading ####
+# OHD - note data is taken from C:/FTP
+# OHD - definition taken from RSBOHFIELDS & RSBOHFIELDST extract via Access
+dtARTG <- fGetOHDTable(
+  pTableName = "MATERIAL",
+  pAddHeader = TRUE, pSystID = pBI_SYST, pClient = "300")
+setkey(dtARTG, MATERIAL)
+
+# dtARTG <- 
+#   fReadSAPTable(
+#     pSystID   = pBI_SYST, 
+#     pClient   = "300", 
+#     pTable    = "/BI0/PMATERIAL", 
+#     pOptions  = list())
+
+# MS-Access Extract
+# dtARTG <- fGetEXPTable(pTableName = "~BI0~PMATERIAL", 
+#                       pSystID = pBI_SYST, pClient = "300")
+
+dtCASE <- dtARTG[EANUPC %in% c("3613190081505", 
+                               "3613190090514", 
+                               "3613190081512")]
+
+# Take sub set: only Frames and Sun 196k -> 100K
+dtARTG <- dtARTG[MATL_GROUP %in% c("130131", "140141") &
+                 MATL_TYPE == "Z007" &
+                 VAL_CLASS != 2600]
+
+
+# # get the articles sold last 3 years with MATL_GROUP 130131/140141
+# # dtFLT <- unique(dtSLS_3Y[, .(MATERIAL)])
+# # save(dtFLT, file = "../pythia_Priv/11_RData/dtART_FLT.RData")
+# load("./11_RData/dtART_FLT.RData")
+# dtFLT[, MATERIAL:= str_pad(string = MATERIAL, width = 18, side = "left", pad = "0")]
+# 
+# # reduce to articles Sold
+# dtARTG <- dtFLT[dtARTG, on = .(MATERIAL), nomatch = 0]
+
+# determine fields to keep
+# write.table(x = fTableOverview(dtARTG)[[3]],
+#             file = "./11_RData/ARTG_SELECTIONS2.csv",
+#             sep = ";", row.names = FALSE, col.names = TRUE)
+
+# reducing ####
+dtARTG <- dtARTG[, .(
+  MATERIAL,           # •	Article number (MARA-MATNR)
+  EANUPC,             # •  EAN
+  RF_BNDID,	          # •	Brand (MARA- ZZBRANDID)                 /BI0/TRF_BNDID 
+  GENDER,             # •	Gender (MARA- ZZGENDER)                 /BI0/TGENDER
+#  G1MODEL,            # •	Model (MARA- ZZMODEL)                   #                      ? >21500
+  G1COLOR,            # •	Colour (MARA- ZZCOLOR)                  /BIC/TG1COLOR
+  G1MATYP,            # •	Material Type (MARA-ZZMATGRP)           /BIC/TG1MATYP
+  G1EBRIND,           # •	EB-NEB Indicator                        /BIC/TG1....
+  G1WHERL,            #   Country of Origin                       #
+  G1MATRIAL,          #   MATERIAL                                /BIC/TG1MATRIAL
+#  G1STYLE,            # •	Style (MARA- ZZSTYLE_GV)               /BIC/TG1STYLE          ? <5000
+  G1BRNDTY,           #   Brand Type                              /BIC/TG1BRNDTY
+#  G1FILCAT,           #   Filter Category                         /BIC/TG1FILCAT         ? <5000
+  G1RIM,              #   RIM                                     /BIC/TG1RIM
+#  G1TGTGRP1,          # •	Target Age group (MARA- ZZTGTGRP_GV)    /BIC/TG1TGTGRP1       ? <5000
+  G1FRMSHP,           #   Frame Shape                             /BIC/TG1FRMSHP
+#  G1GROOVE,           #   Groove                                  /BIC/TG1GROOVE         ? <5000
+  VAL_CLASS,          #   Valuation Class                         /BI0/TVAL_CLASS
+  G1HING,             #   HING                                    /BIC/TG1HING
+  MATL_GROUP          # •	Merchandise Hierachy level 2            /BI0/TMATL_GROUP
+#  RT_PRBAND,          # •	Price Point (MARA- PLGTP)               /BI0/TRT_PRBAND
+#  G1MDTRY,            # •	Mandatory SKU(MARA-ZZMNDTRY_CHK)        #
+#  G1BSTSELL,          # •	Best Seller (MARA-ZZBSTSELL_CHK)        #
+#  G1RECOMM            # •	Recommended (MARA- ZZRECOMM_CHK)        #
+)]
+
+# correcting ####
+dtARTG <- dtARTG[, MATERIAL := gsub("(^)0+", "", MATERIAL, perl = TRUE)]
+# dtARTG <- dtARTG[MATERIAL %in% dtSLSO$MATERIAL]
+
+# cleansing ####
+
+# enriching ####
+dtARTG[, BSCOLOR := paste0(substr(G1COLOR , 1, 1), "_")]
+
+# Add Article Text  
+dtTXT <- fGetEXPTable(pTableName = "~BI0~TMATERIAL", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(MATERIAL, TXTMD)]
+dtTXT <- dtTXT[, MATERIAL := gsub("(^)0+", "", MATERIAL, perl = TRUE)]
+setnames(dtTXT, c("TXTMD"), c("MATERIAL_T"))
+dtARTG <- dtTXT[dtARTG, on = "MATERIAL"]
+
+# Add Brand Text  
+dtTXT <- fGetEXPTable(pTableName = "~BI0~TRF_BNDID", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(RF_BNDID, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("BRAND_T"))
+dtARTG <- dtTXT[dtARTG, on = "RF_BNDID"]
+
+# Add Gender Text
+dtTXT <- fGetEXPTable(pTableName = "~BI0~TGENDER", 
+                      pSystID = pBI_SYST, pClient =   "300")
+dtTXT <- dtTXT[LANGU == "E", .(GENDER, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("GENDER_T"))
+dtARTG <- dtTXT[dtARTG, on = "GENDER"]
+
+# Add Color Text
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1COLOR", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1COLOR, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("G1COLOR_T"))
+dtARTG <- dtTXT[dtARTG, on = "G1COLOR"]
+# Add Basic Color
+setnames(dtTXT, 
+         c("G1COLOR", "G1COLOR_T"), 
+         c("BSCOLOR", "BSCOLOR_T"))
+dtARTG <- dtTXT[dtARTG, on = .(BSCOLOR = BSCOLOR)]
+
+# Add Matyp       Text 
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1MATYP", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1MATYP, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("G1MATYP_T"))
+dtARTG <- dtTXT[dtARTG, on = "G1MATYP"]
+
+# Add MATL_GROUP    Text 
+dtTXT <- fGetEXPTable(pTableName = "~BI0~TMATL_GROUP", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(MATL_GROUP, TXTSH)]
+setnames(dtTXT, c("TXTSH"), c("MATL_GROUP_T"))
+dtARTG <- dtTXT[dtARTG, on = "MATL_GROUP"]
+
+# Add G1MATRIAL    Text 
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1MATRIAL", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1MATRIAL, TXTSH)]
+setnames(dtTXT, c("TXTSH"), c("G1MATRIAL_T"))
+dtARTG <- dtTXT[dtARTG, on = "G1MATRIAL"]
+
+# Add G1BRNDTY    Text 
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1BRNDTY", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1BRNDTY, TXTSH)]
+setnames(dtTXT, c("TXTSH"), c("G1BRNDTY_T"))
+dtARTG <- dtTXT[dtARTG, on = "G1BRNDTY"]
+
+# Add G1RIM    Text 
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1RIM", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1RIM, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("G1RIM_T"))
+dtARTG <- dtTXT[dtARTG, on = "G1RIM"]
+
+# Add G1FRMSHP    Text 
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1FRMSHP", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1FRMSHP, TXTSH)]
+setnames(dtTXT, c("TXTSH"), c("G1FRMSHP_T"))
+dtARTG <- dtTXT[dtARTG, on = "G1FRMSHP"]
+
+# Add G1HING    Text 
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1HING", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1HING, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("G1HING_T"))
+dtARTG <- dtTXT[dtARTG, on = "G1HING"]
+
+# Add VAL_CLASS    Text 
+dtTXT <- fGetEXPTable(pTableName = "~BI0~TVAL_CLASS", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(VAL_CLASS, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("VAL_CLASS_T"))
+dtARTG <- dtTXT[dtARTG, on = "VAL_CLASS"]
+
+# # Add GTGRP1    Text 
+# dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1TGTGRP1", 
+#                       pSystID = pBI_SYST, pClient = "300")
+# dtTXT <- dtTXT[LANGU == "E", .(G1TGTGRP1, TXTMD)]
+# setnames(dtTXT, c("TXTMD"), c("G1TGTGRP1_T"))
+# dtARTG <- dtTXT[dtARTG, on = "G1TGTGRP1"]
+
+# # Add G1STYLE   Text 
+# dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1STYLE",
+#                       pSystID = pBI_SYST, pClient = "300")
+# dtTXT <- dtTXT[LANGU == "E", .(G1STYLE, TXTMD)]
+# setnames(dtTXT, c("TXTMD"), c("G1STYLE_T"))
+# dtARTG <- dtTXT[dtARTG, on = "G1STYLE"]
+
+# # Add RT_PRBAND Text 
+# dtTXT <- fGetEXPTable(pTableName = "~BI0~TRT_PRBAND", 
+#                       pSystID = pBI_SYST, pClient = "300")
+# dtTXT <- dtTXT[LANGU == "E", .(RT_PRBAND, TXTSH)]
+# setnames(dtTXT, c("TXTSH"), c("RT_PRBAND_T"))
+# dtARTG <- dtTXT[dtARTG, on = "RT_PRBAND"]
+
+# Correct EB/NEB indicator
+dtARTG[G1EBRIND == "" & G1BRNDTY != "P", G1EBRIND := "NEB"]
+dtARTG[G1EBRIND == "" & G1BRNDTY == "P", G1EBRIND := "EB" ]
+
+# subsetting ####
+# Limit to Frame and Sun
+dtARTG <- dtARTG[MATL_GROUP %in% c("130131", "140141")]
+
+if (pBRANDTXT == FALSE) {
+   dtARTG[, `:=`(BRAND_T    = "UNKNOWN",
+                 MATERIAL_T = "UNKNOWN")]}
+
+setnames(dtARTG, "EANUPC", "EAN")
+
+# saving ####
+setcolorder(dtARTG, c("MATERIAL"  , "MATERIAL_T"  , "EAN",
+                      "RF_BNDID"  , "BRAND_T"     , 
+                      "G1BRNDTY"  , "G1BRNDTY_T"  , "G1EBRIND", 
+                      "MATL_GROUP", "MATL_GROUP_T",  
+                      "G1COLOR"   , "G1COLOR_T"   , "BSCOLOR", "BSCOLOR_T",  
+                      "GENDER"    , "GENDER_T"    , "G1HING",  "G1HING_T", 
+                      "G1RIM"     ,  "G1RIM_T"    , "G1FRMSHP", "G1FRMSHP_T",
+                      "G1MATRIAL" , "G1MATRIAL_T" , "G1MATYP", "G1MATYP_T",
+                      "G1WHERL"   ,
+                      "VAL_CLASS" , "VAL_CLASS_T"))
+
+setkey(dtARTG, MATERIAL)
+save(dtARTG,           file = file.path(".", "11_RData", "dtARTG.RData"))
+write.fst(x = dtARTG , path = file.path(".", "11_RData", "dtARTG.Rfst" ))
+
+# sweeping ####
+rm(dtTXT, dtCASE)
+
+```
+
+```{r Pythia}
+
+lSystID <- "BP1"
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BI0/TGENDER", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BI0/TMATERIAL", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BI0/TMATL_GROUP", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BI0/TRF_BNDID", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BI0/TVAL_CLASS", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/TG1BRNDTY", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/TG1COLOR", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/TG1FRMSHP", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/TG1HING", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/TG1MATRIAL", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/TG1MATYP", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtTXT <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/TG1RIM", 
+    pOptions  = list("LANGU = 'E'"))
+
+dtQ12 <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/AG1SDPD2200", 
+    pOptions  = list("CALDAY LIKE '201712%'", "AND",
+                     "BILL_TYPE = 'FP'", "AND",
+                     "(MATL_GROUP = '130131' OR MATL_GROUP = '140141')"),
+    pFields   = list('CALDAY', 'MATERIAL', 'PLANT', 'RET_ITM', 'BILL_QTY'))
+
+dtQ01 <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/AG1SDPD2200", 
+    pOptions  = list("CALDAY LIKE '201801%'", "AND",
+                     "BILL_TYPE = 'FP'", "AND",
+                     "(MATL_GROUP = '130131' OR MATL_GROUP = '140141')"),
+    pFields   = list('CALDAY', 'MATERIAL', 'PLANT', 'RET_ITM', 'BILL_QTY'))
+
+dtQ02 <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/AG1SDPD2200", 
+    pOptions  = list("CALDAY LIKE '201802%'", "AND",
+                     "BILL_TYPE = 'FP'", "AND",
+                     "(MATL_GROUP = '130131' OR MATL_GROUP = '140141')"),
+    pFields   = list('CALDAY', 'MATERIAL', 'PLANT', 'RET_ITM', 'BILL_QTY'))
+
+T1 <- Sys.time()
+dtQGI <- 
+  fReadSAPTable(
+    pSystID   = lSystID, 
+    pClient   = "300", 
+    pTable    = "/BIC/AG1IMPD132", 
+    pOptions  = list("PLANT = 'G001'",       "AND",
+                     "MOVE_PLANT <> 'G001'", "AND",
+                     "MOVE_PLANT <> 'G030'", "AND",
+                     "MOVE_PLANT <> 'G040'"),                     
+    pFields   = list('CALDAY', 'MATERIAL', 'MOVE_PLANT', 'MOVETYPE', 'QUANT_B'))
+Sys.time() - T1
+
+dtQGI_1 <- dtQGI %>%
+  .[MOVETYPE %in% c("641", "643", "901", "910")] %>%
+  .[, QUANT_B := fChar2Num(QUANT_B)]
+
+
+```
+
+
+###Article Checks###
+
+```{r Article Checks}
+(setorder(dtARTG[, .N, by = .(G1EBRIND                )]  , -N))
+(setorder(dtARTG[, .N, by = .(G1BRNDTY, G1BRNDTY_T    )]  , -N))
+(setorder(dtARTG[, .N, by = .(RF_BNDID, BRAND_T       )]  , -N))
+(setorder(dtARTG[, .N, by = .(MATL_GROUP, MATL_GROUP_T)]  , -N))
+(setorder(dtARTG[, .N, by = .(GENDER, GENDER_T        )]  , -N))
+(setorder(dtARTG[, .N, by = .(G1COLOR, COLOR_T        )]  , -N))
+(setorder(dtARTG[, .N, by = .(G1MATYP, G1MATYP_T      )]  , -N))
+
+```
+
+##Article Sales##
+
+```{r import_mat_sales}
+dtARTL <- fGetOHDTable(
+  pTableName = "MAT_SALES", 
+  pAddHeader = TRUE, pSystID = pBI_SYST, pClient = "300" )
+setkey(dtARTL, MAT_SALES, DISTR_CHAN, SALESORG)
+
+# Limit to master Data of sold articles
+dtARTL <- dtARTL[, MAT_SALES := gsub("(^)0+", "", MAT_SALES, perl = TRUE)]
+
+# Remove invalid Records and constraint to sold Articles
+dtARTL <- dtARTL[SALESORG     != ""                 &
+                   DISTR_CHAN %in% c("10", "30")    &
+                   MAT_SALES  %in% dtARTG$MATERIAL]
+
+# Limit to Frame and Sun
+#dtARTL <- dtARTL[MATL_GROUP %in% c("130131", "140141")]
+
+# Limit the columns
+dtARTL <- dtARTL[, .(
+  MAT_SALES, DISTR_CHAN, SALESORG, G1STYLE, RT_PRBAND, G1TGTGRP1
+  # ,G1TGAGRP, G1DCARST
+# •	Distribution profile (xdock/bulk)
+# •	Article status (sales status) of the sales org
+)]
+
+
+# Add G1STYLE           Text ####
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1STYLE", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1STYLE, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("G1STYLE_T"))
+dtARTL <- dtTXT[dtARTL, on = "G1STYLE"]
+# Add RT_PRBAND         Text ####
+dtTXT <- fGetEXPTable(pTableName = "~BI0~TRT_PRBAND", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(RT_PRBAND, TXTSH)]
+setnames(dtTXT, c("TXTSH"), c("RT_PRBAND_T"))
+dtARTL <- dtTXT[dtARTL, on = "RT_PRBAND"]
+# Add G1TGTGRP1         Text ####
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1TGTGRP1", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1TGTGRP1, TXTMD)]
+setnames(dtTXT, c("TXTMD"), c("G1TGTGRP1_T"))
+dtARTL <- dtTXT[dtARTL, on = "G1TGTGRP1"]
+
+rm(dtTXT)
+
+setcolorder(dtARTL, c("MAT_SALES", "DISTR_CHAN", "SALESORG", 
+                      "RT_PRBAND", "RT_PRBAND_T",
+                      "G1STYLE"  , "G1STYLE_T",
+                      "G1TGTGRP1", "G1TGTGRP1_T"))
+setnames(dtARTL, "MAT_SALES", "MATERIAL")
+
+# create key as this is necessary to join MD and TD 
+setkey(dtARTL, MATERIAL, DISTR_CHAN, SALESORG)
+
+save(dtARTL, file = file.path(PRJ, "11_RData", "dtARTL.RData"))
+write.fst(x = dtARTL, path = file.path(".", "11_RData", "dtARTL.Rfst"))
+```
+
+```{r SHOP}
+dtSHOP <- fGetOHDTable(
+  pTableName = "PLANT", 
+  pAddHeader = TRUE, pSystID = pBI_SYST, pClient = "300" )
+setkey(dtSHOP, PLANT)
+
+dtSHOP <- unique(dtSHOP[PLANTCAT == "A", 
+                        .(PLANT, COUNTRY, DISTR_CHAN, REGION, SALESORG, 
+                          SALES_DIST, G1STFLG, G1SITPROF, PURCH_ORG,
+                          LATITUDE, LONGITUDE)])
+
+dtPORG <- fGetEXPTable(pTableName = "~BI0~PPURCH_ORG", 
+                       pSystID = pBI_SYST, pClient = "300")
+
+# Add SUPPLYING DC
+dtSHOP[PURCH_ORG == "" & COUNTRY %in% c("GB","IE"), 
+       PURCH_ORG :=  "GB01"]
+
+dtSHOP <- 
+  dtPORG[, .(PURCH_ORG, G1SUPPDC)][
+  dtSHOP, 
+  on = c("PURCH_ORG")]
+setnames(dtSHOP, "G1SUPPDC", "LW")
+
+rm(dtPORG)
+
+# Add REGION            Text ####
+dtTXT <- fGetEXPTable(pTableName = "~BI0~TREGION", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(COUNTRY, REGION, TXTSH)]
+setnames(dtTXT, c("TXTSH"), c("REGION_T"))
+dtSHOP <- dtTXT[dtSHOP, on = c("COUNTRY", "REGION")]
+# Add Sales District    Text ####
+dtTXT <- fGetEXPTable(pTableName = "~BI0~TSALES_DIST", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(SALES_DIST, TXTSH)]
+setnames(dtTXT, c("TXTSH"), c("SALES_DIST_T"))
+dtSHOP <- dtTXT[dtSHOP, on = c("SALES_DIST")]
+# Add Site Profile      Text ####
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1SITPROF", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[LANGU == "E", .(G1SITPROF, TXTSH)]
+setnames(dtTXT, c("TXTSH"), c("G1SITPROF_T"))
+dtSHOP <- dtTXT[dtSHOP, on = c("G1SITPROF")]
+# Add Store Flag        Text ####
+dtTXT <- fGetEXPTable(pTableName = "~BIC~TG1STFLG", 
+                      pSystID = pBI_SYST, pClient = "300")
+dtTXT <- dtTXT[, .(G1STFLG, TXTSH)] #LANGU == "E"
+setnames(dtTXT, c("TXTSH"), c("G1STFLG_T"))
+dtSHOP <- dtTXT[dtSHOP, on = c("G1STFLG")]
+
+# save ####
+setcolorder(dtSHOP, c("PLANT"     , "DISTR_CHAN"  , "SALESORG" , 
+                      "COUNTRY"   , "REGION"      , "REGION_T" ,
+                      "SALES_DIST", "SALES_DIST_T", 
+                      "LATITUDE"  , "LONGITUDE", 
+                      "PURCH_ORG" , "LW",
+                      "G1STFLG"   , "G1STFLG_T"   , 
+                      "G1SITPROF" , "G1SITPROF_T"))
+setkey(dtSHOP, PLANT)
+
+save(dtSHOP, file = file.path(".", "11_RData", "dtSHOP.RData"))
+
+write.fst(x = dtSHOP , path = file.path(".", "11_RData", "dtSHOP.Rfst"))
+```
+
+```{r OverView, eval=FALSE, include=FALSE}
+View(fTableOverview(dtARTG)[["dtRATIO"]])
+View(fTableOverview(dtARTL)[["dtRATIO"]])
+View(fTableOverview(dtSHOP)[["dtRATIO"]])
+View(fTableOverview(dtSLSO)[["dtRATIO"]])
+
+```
+
+```{r Supplier-Material, eval=FALSE, include=FALSE}
+dtEINA <- fGetEXPTable(pTableName = "EINA", 
+                       pSystID = pECC_SYST, pClient = "300")
+dtEINA[, MATNR := substring(text = MATNR, first = 11, last = 18)]
+dtEINA <- dtEINA[MATNR %in% dtGSS$MATERIAL, .(MATNR, LIFNR, RELIF)]
+setkey(dtEINA)
+```
+
+#Sales#
+
+The sales data is coming from the ERP billing data, having a filter set on
+Billing_Type = FP and
+MATL_GROUP   = 130131 or 140141  
+
+```{r iSYNH Sell-out VEUK, eval=FALSE, include=FALSE, results='markup'}
+
+# loading ####
+# 16363812 rows
+dtVEUK <- fread(file.path("C:", "FTP", "VEUK_POS_HISTORY.csv"), 
+                select = c("SALESORG", "DISTR_CHAN", "PLANT", 
+                           "MATERIAL", "SLSDATE"   , "QUANTITY" ))
+
+# renaming ####
+setnames(dtVEUK, 
+         c("SLSDATE", "QUANTITY"), 
+         c("CALDAY" , "Q"))
+
+# cleansing ####
+dtVEUK <- dtVEUK[!grepl(pattern = "-", x = Q)]
+
+# correcting ####
+dtVEUK[, `:=`(
+  DC       = "G020",
+  Q        = as.integer(Q),
+  MATERIAL = gsub("(^)0+", "", MATERIAL, perl = TRUE))]
+
+# aggregating ####
+dtVEUK <- 
+  dtVEUK[, .(Q = sum(Q)), 
+             by = .(DC   , SALESORG, DISTR_CHAN, 
+                    PLANT, MATERIAL, CALDAY)]
+
+# enriching ####
+dtVEUK <- dtARTG[, .(MATERIAL, MATL_GROUP)][dtVEUK, on= .(MATERIAL)]
+
+# Remove Outliers
+# dtSLSO <- dtSLSO[Q <= ceiling(mean((dtSLSO[, Q])) + 
+#                                 6*sd((dtSLSO[, Q])))]  
+
+# Limit to Frames and Sunglasses
+dtVEUK <- 
+  dtVEUK[MATL_GROUP %in% c("130131", "140141") &
+           MATERIAL != "DGB000000000001338" &
+           Q > 0 ]
+
+# subsetting ####
+
+# ordering ####
+setcolorder(dtVEUK, names(dtSLSO))
+
+# saving ####
+save(dtVEUK, file = VEUK.RD)
+
+# END ####
+```
+
+```{r iSYNH Sell-out GVBNL, eval=FALSE, include=FALSE, results='markup'}
+
+# loading ####
+#  20159946 rows
+dtGVBNL <- fread(file.path("C:", "FTP", "GVBNL_POS_HISTORY.csv"), 
+                select = c("SALESORG", "DISTR_CHAN", "PLANT", 
+                           "MATERIAL", "SLSDATE"   , "QUANTITY" ))
+
+# renaming ####
+setnames(dtGVBNL, 
+         c("SLSDATE", "QUANTITY"), 
+         c("CALDAY" , "Q"))
+
+# cleansing ####
+dtGVBNL <- dtGVBNL[!grepl(pattern = "-", x = Q)]
+
+# correcting ####
+dtGVBNL[, `:=`(
+  DC       = "G010",
+  Q        = as.integer(Q),
+  MATERIAL = gsub("(^)0+", "", MATERIAL, perl = TRUE))]
+
+# aggregating ####
+dtGVBNL <- 
+  dtGVBNL[, .(Q = sum(Q)), 
+             by = .(DC   , SALESORG, DISTR_CHAN, 
+                    PLANT, MATERIAL, CALDAY)]
+
+# enriching ####
+dtGVBNL <- dtARTG[, .(MATERIAL, MATL_GROUP)][dtGVBNL, on= .(MATERIAL)]
+
+# Remove Outliers
+# dtSLSO <- dtSLSO[Q <= ceiling(mean((dtSLSO[, Q])) + 
+#                                 6*sd((dtSLSO[, Q])))]  
+
+# Limit to Frames and Sunglasses
+dtGVBNL <- 
+  dtGVBNL[MATL_GROUP %in% c("130131", "140141") &
+            Q > 0]
+
+# subsetting ####
+
+# ordering ####
+setcolorder(dtGVBNL, names(dtSLSO))
+
+# saving ####
+save(dtGVBNL, file = GVBNL.RD)
+
+# END ####
+```
+
+```{r Create dtSLSH, eval=FALSE, include=FALSE, results='markup'}
+load(VEUK.RD)
+load(GVBNL.RD)
+
+dtSLSH <- rbind(dtVEUK, dtGVBNL)
+
+# saving ####
+save(dtSLSH, file = SLSH.RD)
+
+rm(dtVEUK, dtGVBNL)
+# END ####
+```
+
+```{r iSYN Sell-out, include=FALSE, results='markup'}
+
+# loading ####
+dtSLSO <- 
+  fGetOHDTable(pTableName = "G1SDPD22_2014-2017", 
+               pAddHeader = TRUE, pSystID = "BP1", pClient = "300" )
+
+# reducing ####
+dtSLSO[, `:=`(
+  BILL_NUM   = NULL,
+  BILL_ITEM  = NULL,
+  RPA_SNU    = NULL,
+  BASE_UOM   = NULL,
+  SPECFG     = NULL,
+  RPA_TTC    = NULL,
+  RPA_RTC    = NULL,
+  DISCRSN    = NULL,
+  CUST_AGE   = NULL,
+  CUST_GNDR  = NULL,
+  RET_ITM    = NULL
+)]
+
+# cleansing ####
+
+# correcting ####
+# put minus at start instead of end
+# dtSLSO[, SIGN:= 1L][grep(pattern = "-", x = Q), SIGN:= -1L]
+# dtSLSO[, QS:= as.numeric(sub(pattern = "-"   , replacement = "", x = Q)) * SIGN]
+dtSLSO[, `:=`(
+  # Q        = QS,
+  # QS       = NULL,
+  # SIGN     = NULL,
+  Q        = as.integer(Q),
+  MATERIAL = gsub("(^)0+", "", MATERIAL, perl = TRUE))]
+# ,
+#              CUST_AGE = gsub("(^)0+", "", CUST_AGE, perl = TRUE))]
+
+# selecting ####
+# Remove Outliers
+# changed on 20180204 based on FvO
+# dtSLSO <- dtSLSO[Q > 0]
+# dtSLSO <- dtSLSO[Q <= ceiling(mean((dtSLSO[, Q])) + 
+#                                 6*sd((dtSLSO[, Q])))]  
+
+####################### CASES ###################################
+# dtCASE <- dtSLSO[SALESORG == "GB13" & CALDAY < "20170423"]
+# save(dtCASE, file = file.path(".", "11_RData", "dtCASE.RData"))
+# stop()
+#################################################################
+
+# Limit to Frames and Sunglasses
+dtSLSO <- dtSLSO[MATL_GROUP %in% c("130131", "140141")]
+
+# subsetting ####
+# dtSLSO <- dtSLSO[CALDAY >= "20150801" & CALDAY < "20160801"]
+
+# saving ####
+# save(dtSLSO, file = SLSO.RD)
+save(dtSLSO, file = file.path(".", "11_RData", "dtSLSO.RData"))
+
+# END ####
+```
+
+# VEUK POSDM Errors
+
+```{r VEUK_POSDM, eval=FALSE, include=FALSE}
+dtPOSDM_ERROR <- 
+  fread(file.path(".", "10_RawData", "VEUK_POSDM_ERRORS.csv"),
+        colClasses = list(character = 1:3, integer = 4))
+dtPOSDM_ERROR <- 
+  dtPOSDM_ERROR[MATERIAL != ""][
+    !is.na(MATERIAL)][, MATERIAL := gsub("(^)0+", "", MATERIAL, perl = TRUE)]
+dtPOSDM_ERROR <- dtPOSDM_ERROR[, Q := as.integer(Q)][Q > 0]
+
+# restrict to 130131 and 140141
+load(file = file.path(".", "11_RData", "dtARTG.RData"))
+dtPOSDM_ERROR <- 
+  dtARTG[MATL_GROUP %in% c("130131","140141"), 
+         .(MATERIAL)][dtPOSDM_ERROR,
+         on = .(MATERIAL),
+         nomatch = 0]
+
+save(dtPOSDM_ERROR, file = file.path("./11_RData/dtPOSERR.RData"))
+```
+
+
+##DELTA Update Sales##
+
+This coding updates the sales data from 2017 till last download
+
+```{r DeltaUpdate, include=FALSE}
+#load(file = file.path(PATH_PERSON_DATA, "dtPOSERR.RData"))
+
+# load the last data set with 3 years of sales data
+# load(file.path(PATH_PERSON_DAT, "dtSLS_3Y.RData"))
+load("./11_RData/dtSLS_H.RData")
+dtSLS_H <- 
+  dtSLS_H[, .(PLANT, MATERIAL, CALDAY, Q)]
+
+# delete all rows of 2017
+dtSLS_H <- dtSLS_H[CALDAY < 20171130]
+range(dtSLS_H$CALDAY)
+
+# Load the new Delta dtSLSO data
+# load(file.path(PATH_PERSON_DAT, "dtSLSO.RData"  ))
+load("./11_RData/dtSLSO.RData")
+dtSLSO <- dtSLSO[, .(PLANT, MATERIAL, CALDAY, Q) ]
+dtSLSO <- dtSLSO[CALDAY >= 20171130 & CALDAY < 20180201, ] # attention must be SA
+setkey(dtSLSO, PLANT, MATERIAL, CALDAY)
+range(dtSLSO$CALDAY)
+
+dtSLS_H <- rbind(dtSLS_H, dtSLSO)
+# dtSLS_3Y <- rbind(dtSLS_3Y, dtPOSDM_ERROR)
+# dtSLS_3Y <- dtSLS_3Y[CALDAY < "20170601"]
+dtSLS_H <- dtSLS_H[, .(Q = sum(Q)), by = .(PLANT, MATERIAL, CALDAY)]
+setkeyv(dtSLS_H, key(dtSLSO))
+range(dtSLS_H$CALDAY)
+#save(dtSLS_3Y, file = file.path(PATH_PERSON_DAT, "dtSLS_3Y.RData"))
+save(dtSLS_H, file = file.path("./11_RData/dtSLS_H.RData"))
+#write.fst(x = dtSLS_3Y, path = file.path(PATH_PERSON_DATA, "dtSLS_3Y.Rfst"))
+write.fst(x = dtSLS_H, path = file.path("./11_RData/dtSLS_H.Rfst"))
+```
+
+```{r LAYOUTMOD, eval=FALSE, include=FALSE}
+dtTWVV  <- fGetEXPTable(pTableName = "TWWV", 
+                       pSystID = "RP1", pClient = "300")
+dtTWGLV <- fGetEXPTable(pTableName = "TWGLV", 
+                       pSystID = "RP1", pClient = "300")
+dtMALG  <- fGetEXPTable(pTableName = "MALG", 
+                       pSystID = "RP1", pClient = "300")
+
+
+```
+
+
+
+
+GSS
+
+```{r GSS_iSYN Sell-outh, eval=FALSE, include=FALSE, results='markup'}
+
+# loading ####
+dtVEUK <- read.csv("C:/FTP/1. VEUK_POS_HISTORY.csv", stringsAsFactors=FALSE)
+
+
+# reducing ####
+dtSLSO[, `:=`(
+  BILL_NUM   = NULL,
+  BILL_ITEM  = NULL,
+  RPA_SNU    = NULL,
+  BASE_UOM   = NULL,
+  SPECFG     = NULL,
+  RPA_TTC    = NULL,
+  RPA_RTC    = NULL,
+  DISCRSN    = NULL,
+  CUST_AGE   = NULL,
+  CUST_GNDR  = NULL,
+  RET_ITM    = NULL
+)]
+
+# cleansing ####
+
+# correcting ####
+# put minus at start instead of end
+# dtSLSO[, SIGN:= 1L][grep(pattern = "-", x = Q), SIGN:= -1L]
+# dtSLSO[, QS:= as.numeric(sub(pattern = "-"   , replacement = "", x = Q)) * SIGN]
+dtSLSO[, `:=`(
+  # Q        = QS,
+  # QS       = NULL,
+  # SIGN     = NULL,
+  Q        = as.integer(Q),
+  MATERIAL = gsub("(^)0+", "", MATERIAL, perl = TRUE))]
+# ,
+#              CUST_AGE = gsub("(^)0+", "", CUST_AGE, perl = TRUE))]
+
+# selecting ####
+# Remove Outliers
+dtSLSO <- dtSLSO[Q > 0]
+dtSLSO <- dtSLSO[Q <= ceiling(mean((dtSLSO[, Q])) + 
+                                6*sd((dtSLSO[, Q])))]  
+
+# Limit to Frames and Sunglasses
+dtSLSO <- dtSLSO[MATL_GROUP %in% c("130131", "140141")]
+
+# subsetting ####
+# dtSLSO <- dtSLSO[CALDAY >= "20150801" & CALDAY < "20160801"]
+
+# saving ####
+save(dtSLSO, file = SLSO.RD)
+
+# END ####
+```
+
+```{r GSS_nSYN Sell-Out, eval=FALSE, include=FALSE, results='markup'}
+
+# loading ####
+# dtGSSO <- fGetOHDTable(pTableName = "G1OHDGS2", 
+#                        pAddHeader = TRUE, pSystID = "BP1", pClient = "300" )
+dtGSSO <-  as.data.table(
+  read.csv("C:/FTP/BP1C300_G1OHDGS2.txt",
+           header = FALSE,
+           sep = ";", colClasses = "character",
+           stringsAsFactors = FALSE
+  ))
+l_hdr <- fGetFieldNM(pTableName = "G1OHDGS2", 
+                     pSystID = pBI_SYST, pClient = pBI_CLNT)
+setnames(dtGSSO, l_hdr)
+
+# reducing ####
+dtGSSO[, `:=` (VERSION    = NULL, UNIT       = NULL, SALES_UNIT = NULL, 
+               CURRENCY   = NULL, RECORDMODE = NULL, QUANTITY   = NULL,
+               G1GSSDISC  = NULL, G1GSSSV    = NULL, G1GSSCOGS  = NULL,
+               G1LENGTH   = NULL, G1GSSMTH   = NULL, CALYEAR    = NULL,
+               CALMONTH2  = NULL, G1VALID    = NULL, G1LEGEAN   = NULL)]
+
+# cleansing ####
+# - only positive sales
+# - incorrect entries
+dtGSSO <- dtGSSO[G1LEGEAN != "Totalgeneral"]   # incorrect entries
+dtGSSO <- dtGSSO[SALESORG != "0.00 "]          # incorrect entries
+
+# Correcting ####
+# Due to the thousand separator some figures are incorrect
+# for this reason both , and . are just removed as these are both probabaly 1000
+
+# dtCHK01 <- dtGSSO[grepl(pattern = "\\.|,", x = INV_QTY) == TRUE]
+# fWriteToSheet(dtCHK01, pPath, pXLSX, "Thousand_Sep", pAppend = FALSE )
+dtGSSO[, `:=`(
+  # Q        = QS,
+  # QS       = NULL,
+  # SIGN     = NULL,
+  CALMONTH   = paste0(CALMONTH, "01"),
+  Q        = as.integer(sub("\\.|,", "", INV_QTY)),
+  MATERIAL = gsub("(^)0+", "", MATERIAL, perl = TRUE),
+  # MATERIAL:= substring(text = MATERIAL, first = 11, last = 18),
+  INV_QTY  = NULL)]
+
+# subsetting ####
+# - Only Frames
+# - Only sales
+# - Only positive Sales
+dtGSSO <- dtGSSO[MATL_GROUP %in% c("130131", "140141") & 
+                   G1GSSLOAD == "SALES" &
+                   Q > 0                  ]
+
+# Enriching ####
+# Join ARTG to filter on Frames and Sunglasses 
+dtGSSO <- dtARTG[dtGSSO, on =.(MATERIAL)]
+
+# Join SalesOrg Text 
+dtSORG <- fGetEXPTable(pTableName = "~BI0~TSALESORG", 
+                       pSystID = pBI_SYST, pClient = "300")
+dtSORG <- dtSORG[LANGU == "E", .(SALESORG, TXTLG)]
+setnames(dtSORG, c("TXTLG"), c("SALESORG_T"))
+dtGSSO <- dtSORG[dtGSSO, on = "SALESORG"]
+rm(dtSORG)
+
+# Join SalesOrg Country 
+dtSORG <- fGetEXPTable(pTableName = "~BI0~PSALESORG", 
+                       pSystID = pBI_SYST, pClient = "300")
+dtSORG <- dtSORG[, .(SALESORG, COUNTRY)]
+# setnames(dtSORG, c("TXTLG"), c("SALESORG_T"))
+dtGSSO <- dtSORG[dtGSSO, on = "SALESORG"]
+rm(dtSORG)
+
+# Remove Outliers
+# dtGSSO <- dtGSSO[INV_QTY <= ceiling(mean((dtGSSO[, INV_QTY])) +
+#            6 * sd((dtGSSO[, INV_QTY])))]  
+
+# Storing #### 
+save(dtGSSO, file = GSSO.RD)
+
+write.table(x = dtGSSO,  file = "GSS.csv", sep = ";", 
+            row.names = FALSE, col.names = TRUE)
+```
+
+```{r GSS_Combined, eval=FALSE, include=FALSE}
+
+# Combining ####
+# Prepare iSYnergy sales
+dtSLSO_1 <- copy(dtSLSO)[, `:=`(DC         = NULL, 
+                                DISTR_CHAN = NULL, 
+                                MATL_GROUP = NULL,
+                                CALMONTH   = paste0(
+                                  substring(CALDAY, 1, 6), "01"),
+                                CALDAY     = NULL)]
+dtSLSO_1 <- dtSLSO_1[, .(Q = sum(Q)), 
+                         by = .(SALESORG, PLANT, MATERIAL, CALMONTH)]
+setcolorder(dtSLSO_1, c("SALESORG", "PLANT", "MATERIAL", "CALMONTH", "Q"))
+
+# Prepare non-iSynergy Sales
+dtGSSO_1 <- copy(dtGSSO)[, `:=`(G1LEGEAN = NULL, 
+                                EANUPC = NULL)
+                         ][ G1GSSLOAD == "SALES"
+                            ][, G1GSSLOAD:= NULL]
+dtGSSO_1 <- dtGSSO_1[, .(Q = sum(Q)), 
+                         by = .(SALESORG, PLANT, MATERIAL, CALMONTH)]
+setcolorder(dtGSSO_1, c("SALESORG", "PLANT", "MATERIAL", "CALMONTH", "Q"))
+
+dtGSOA <- rbind(dtSLSO_1, dtGSSO_1)
+rm(dtSLSO_1, dtGSSO_1)
+
+# Enriching ####
+# Join ARTG to filter on Frames and Sunglasses 
+dtGSOA <- dtARTG[dtGSOA, on =.(MATERIAL)]
+
+# Join SalesOrg Text 
+dtSORG <- fGetEXPTable(pTableName = "~BI0~TSALESORG", 
+                       pSystID = pBI_SYST, pClient = "300")
+dtSORG <- dtSORG[LANGU == "E", .(SALESORG, TXTLG)]
+setnames(dtSORG, c("TXTLG"), c("SALESORG_T"))
+dtGSOA <- dtSORG[dtGSOA, on = "SALESORG"]
+rm(dtSORG)
+
+# Join SalesOrg Country 
+dtSORG <- fGetEXPTable(pTableName = "~BI0~PSALESORG", 
+                       pSystID = pBI_SYST, pClient = "300")
+dtSORG <- dtSORG[, .(SALESORG, COUNTRY)]
+# setnames(dtSORG, c("TXTLG"), c("SALESORG_T"))
+dtGSOA <- dtSORG[dtGSOA, on = "SALESORG"]
+rm(dtSORG)
+
+# Remove Outliers
+# dtGSOA <- dtGSOA[INV_QTY <= ceiling(mean((dtGSOA[, INV_QTY])) +
+#            6 * sd((dtGSOA[, INV_QTY])))]  
+
+# Storing #### 
+save(dtGSOA, file = GSOA.RD)
+
+# write.table(x = dtGSOA,  file = "GSS.csv", sep = ";", 
+#             row.names = FALSE, col.names = TRUE)
+```
+
+```{r GSS_Aggregate, eval=FALSE, include=FALSE}
+dtGSS01 <- dtGSS[as.integer(CALMONTH) > 201606 & MATL_GROUP == "130131"]
+dtGSS01 <- dtGSS01[, .(Q = sum(INV_QTY)), 
+                   by = .(COUNTRY, SALESORG, SALESORG_T, RF_BNDID, BRAND_T,
+                          G1EBRIND, MATL_GROUP, MATL_GROUP_T, 
+                          CALMONTH)]
+dtGSS02 <- dtGSS01[, .(avgQ = mean(Q)), 
+                   by = .(COUNTRY, SALESORG, SALESORG_T, RF_BNDID, BRAND_T,
+                          G1EBRIND, MATL_GROUP, MATL_GROUP_T)]
+write.table(x = dtGSS01,  file = "GSS01.csv", sep = ";", 
+            row.names = FALSE, col.names = TRUE, dec = ",")
+write.table(x = dtGSS02,  file = "GSS02.csv", sep = ";", 
+            row.names = FALSE, col.names = TRUE, dec = ",")
+```
+
+```{r Export}
+
+cOBJ <- c("dtARTG", "dtARTL", "dtSHOP", "dtSLSO", "fTableOverview")
+rm(list = setdiff(objects(), cOBJ))
+save.image(file = "./11_RData/Pythia_IMAGE.RData")
+
+# dtSLSO <- dtSLSO[MATERIAL %in% dtARTG$MATERIAL]
+# dtSLSO <- dtARTG[dtSLSO, on = "MATERIAL", nomatch = 0]
+# 
+# save(dtSLSO, file ="dtSLSO.RData")
+# 
+# write.table(x = dtSLSO, file = "c:/FTP/SLSTD.csv", sep = ";",
+#             col.names = TRUE)
+# 
+# write.table(x = dtARTG, file = "c:/FTP/SLSMD.csv", sep = ";",
+#             col.names = TRUE)
+```
+
+

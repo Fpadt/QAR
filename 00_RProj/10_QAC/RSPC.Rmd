@@ -1,6 +1,6 @@
 ---
 title   : "Quality Assurance Report"
-subtitle: "Config Check"
+subtitle: "Process Chains Schedule"
 author  : "F.J. Padt"
 date    : "`r format(Sys.time(), '%B %d, %Y')`"
 output:
@@ -11,132 +11,114 @@ classoption: landscape
 ---
 
 ```{r setup, echo=FALSE, results= "hide"}
-
- knitr::opts_chunk$set(
-	echo = FALSE,
-	message = FALSE,
-	warning = FALSE,
-	image = TRUE,
-	results = "hide")
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  eval    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  image   = TRUE,
+  results = "hide")
 
 # Cleanse memory
 rm(list = ls())
 gc()
 
-
 # folder locations
-RW   <- file.path("C:", "Users", "fpadt", "Documents", "RW")
+RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
 PRJ  <- file.path(RW , "QAR")
-MOD  <- file.path(PRJ, "05_modules")
+MOD  <- file.path(PRJ, "00_RProj")
+RAW  <- file.path(PRJ, "10_RawData")
 DAT  <- file.path(PRJ, "11_PrepData")
+ANA  <- file.path(PRJ, "30_Analysis")
 RES  <- file.path(PRJ, "60_Results")
 FIG  <- file.path(PRJ, "70_Figures")
 
 # Load functions
-# source(file.path(RW, "pythia", "00_RProj", "GenericFunctions.R"))
-# source(file.path(RW , "pythia", "config",                       "PATHS.R"))
-# source(file.path(RW , "pythia", "SharedFunctions",              "GenericFunctions.R"))
-invisible(source(file.path(RW , "QAR"   , "00_RProj"       , "00_Global", "iSynGeneral.R")))
-# source(file.path(PRJ, "config", "PATHS.R"))
-# source(file.path(MOD, "Initialization_functions.R"))
-# source(file.path(MOD, "Visualization_functions.R"))
-
+invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
 
 # SAP systems to use
-# pECC_SYST <- "RP1"
-# pECC_CLNT <- "300"
-# pBI_SYST  <- "BP1"
-# pBI_CLNT  <- "300"
-# pLGCINDC  <- "C"
+pECC_SYST <- "RP1"
+pECC_CLNT <- "300"
+pBI_SYST  <- "BP1"
+pBI_CLNT  <- "300"
+pLGCINDC  <- "C"
 
-systord  <- c("BD1", "BA1", "BP1", "BTP", "BU1")
+# Data Settings
+pXLSX    <- "RSPC" 
+
+# note VPN is needed for this doesn't work on internal network
+# pINFO    <- "//grandvision.sharepoint.com/sites/NL1-Proj-iSynergy/05_CoE/90%20BI/INFOtst.xlsx"
+pWSHT    <- TRUE
 newfiles <- TRUE
+# SID.lng  <- c("BA1300") #, "BTP300", "BU1300")
+SID.lng  <- c("BD1100", "BU1300", "BA1300", "BP1300") #, "BTP300", "BU1300")
+SID.sht  <- substr(SID.lng, 1, 3)
 
 # set_theme()
 
-# Data Settings
-pWSHT     <- FALSE
-pROWS     <- -1L
-pSMALL    <- 1000
-pEXMP     <- 50 
-pEXP      <- FALSE
-pPATH     <- RES
-pXLSX     <- paste0("RSPC") 
+dtPATH <- 
+  data.table(
+    DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
+    PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
+  )
 
 # Open Excel for storing results
-if (file.exists(paste0(pPATH, "/", pXLSX, ".xlsx")) == TRUE) {
-    file.remove(paste0(pPATH, "/", pXLSX, ".xlsx"))
+if (file.exists(paste0(RES, "/", pXLSX, ".xlsx")) == TRUE) {
+  invisible(file.remove(paste0(RES, "/", pXLSX, ".xlsx")))
 }
-
-dtPATH <- 
-    data.table(
-      DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
-      PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
-    )
 
 if (pWSHT == TRUE) {
   fWriteToSheet(
     dtPATH, 
-    pPATH, pXLSX, "PATHS", pAppend = FALSE )}
+    RES, pXLSX, "PATHS", pAppend = FALSE )}
 
-gvLOGO_PATH <- file.path(PRJ, "70_Figures", "GV_LOGO.png") 
+gvLOGO_PATH <- file.path(FIG, "GV_LOGO.png") 
 if (!file.exists(gvLOGO_PATH)) {
-  download.file(url      = "http://www.grandvision.com/img/logoGV.png",
-                destfile = gvLOGO_PATH,
-                mode     = 'wb')
-  }
+  download.file(
+    url      = "http://www.grandvision.com/img/logoGV.png",
+    destfile = gvLOGO_PATH,
+    mode     = 'wb')
+}
 knitr::include_graphics(gvLOGO_PATH)
 
-if (newfiles == TRUE) {
-  read_and_union <- function(pTableName){
-    lSYSTID <- list("BD1100", "BTP300", "BA1300", "BP1300", "BU1300")
-    
-    dtReturn <- 
-      do.call(
-        rbind,
-        lapply(lSYSTID, function(x) {
-          fGetEXPTable(
-            pTableName = pTableName,
-            pSystID = substr(x, 1, 3),
-            pClient = substr(x, 4, 6)
-          )
-        }))
-    
-    return(dtReturn)
-  }
+# First execute the analysis zsANALYSIS-R1R2_MIG
+# Extecute mcrAnalysesExtract
+# C:\Users\fpadt\SAPEXPORT
+
+read_and_union <- function(pTableName){
   
-  dtRSPCLOGCHAIN  <- read_and_union("RSPCLOGCHAIN")
-  dtRSPCLOGCHAIN[, DATUM := ymd(DATUM)]
+  dtReturn <- 
+    do.call(
+      rbind,
+      lapply(as.list(SID.lng), function(x) {
+        fGetEXPTable(
+          pTableName = pTableName,
+          pSystID = substr(x, 1, 3),
+          pClient = substr(x, 4, 6) )
+      }))
   
-  dtRSPCCHAIN     <- read_and_union("RSPCCHAIN")
-  dtRSPCCHAINT    <- read_and_union("RSPCCHAINT")
-  dtRSPCCHAINATTR <- read_and_union("RSPCCHAINATTR")
-  dtRSPCTRIGGER   <- read_and_union("RSPCTRIGGER")
-  
-  write.fst(x = dtRSPCLOGCHAIN , path = file.path(DAT, "dtRSPCLOGCHAIN.fst"))
-  write.fst(x = dtRSPCCHAIN    , path = file.path(DAT, "dtRSPCCHAIN.fst"))
-  write.fst(x = dtRSPCCHAINT   , path = file.path(DAT, "dtRSPCCHAINT.fst"))
-  write.fst(x = dtRSPCCHAINATTR, path = file.path(DAT, "dtRSPCCHAINATTR.fst"))
-  write.fst(x = dtRSPCTRIGGER  , path = file.path(DAT, "dtRSPCTRIGGER.fst"))
-  
-} else {
-  dtRSPCLOGCHAIN <- 
-    read.fst(path = file.path(DAT, "dtRSPCLOGCHAIN.fst"), 
-             as.data.table = TRUE)
-  dtRSPCCHAIN <- 
-    read.fst(path = file.path(DAT, "dtRSPCCHAIN.fst"),
-             as.data.table = TRUE)
-  dtRSPCCHAINT <- 
-    read.fst(path = file.path(DAT, "dtRSPCCHAINT.fst"),
-                           as.data.table = TRUE)
-  dtRSPCCHAINATTR <- 
-    read.fst(path = file.path(DAT, "dtRSPCCHAINATTR.fst"), 
-             as.data.table = TRUE)
-  dtRSPCTRIGGER <- 
-    read.fst(path = file.path(DAT, "dtRSPCTRIGGER.fst"), 
-             as.data.table = TRUE)  
+  return(dtReturn)
 }
+
 ```
+
+```{r logs, eval=FALSE, include=FALSE}
+
+dtRSPCLOGCHAIN  <- read_and_union("RSPCLOGCHAIN")
+dtRSPCLOGCHAIN[, DATUM := ymd(DATUM)]
+
+dtRSPCCHAIN     <- read_and_union("RSPCCHAIN")
+dtRSPCCHAINT    <- read_and_union("RSPCCHAINT")
+dtRSPCCHAINATTR <- read_and_union("RSPCCHAINATTR")
+dtRSPCTRIGGER   <- read_and_union("RSPCTRIGGER")
+
+```
+
+```{r Jobs, include=FALSE}
+dtTBTCO     <- read_and_union("TBTCO")
+dtTBTCP     <- read_and_union("TBTCP")
+```
+
 
 # Process Chains
 
@@ -215,7 +197,7 @@ dtRSPC_SYST <-
     fun.aggregate = length,  
     value.var     = "CHAIN_ID"
   )                                           %T>%
-  setcolorder(c("CHAIN_ID", "TOT", systord))  %T>%
+  setcolorder(c("CHAIN_ID", "TOT", SID.sht))  %T>%
   setorder(TOT, CHAIN_ID)
 
 dtTMP01 <- 
@@ -257,7 +239,7 @@ needs to be aligned over all systems.
 
 ```{r describe_RSPC_alignment, results='asis'}
 kable(
-  x = dtRSPC_SYST[TOT < 5],
+  x = dtRSPC_SYST[TOT < length(SID.lng)],
   align   = 'l',
   caption = "mis-alignment"
 )
@@ -301,7 +283,7 @@ kable(
         FROM   = range(DATUM)[1],
         TO     = range(DATUM)[2],
         LOGS   = .N),
-    by = .(ID = factor(SYSTID, levels = systord, ordered = TRUE))] %>%
+    by = .(ID = factor(SYSTID, levels = SID.sht, ordered = TRUE))] %>%
     setorder(ID))
 ```
 
@@ -392,6 +374,7 @@ kable(
 The table below shows the scheduling derived from the logs. 
 
 ```{r transform_RSPC_scheduling_logs_alignment}
+dtRSPCLOGCHAIN[, DATUM:= ymd(DATUM)]
 
 dtRSPC_SCHED <- 
   dcast.data.table(
@@ -401,7 +384,7 @@ dtRSPC_SCHED <-
     value.var     = "CHAIN_ID"
   )                                         %>% 
   .[!(BA1 == BP1 | BA1 == BU1) ]            %T>%
-  setcolorder(c("CHAIN_ID", systord))
+  setcolorder(c("CHAIN_ID", SID.sht))
 
 if (pWSHT == TRUE) {
   fWriteToSheet(
@@ -428,7 +411,7 @@ dtRSPC_SCHED_LW <-
     value.var     = "CHAIN_ID"
   )                                         %>% 
   .[!(BA1 == BP1 | BA1 == BU1) ]            %T>%
-  setcolorder(c("CHAIN_ID", systord))
+  setcolorder(c("CHAIN_ID", SID.sht))
 
 if (pWSHT == TRUE) {
   fWriteToSheet(
@@ -725,4 +708,19 @@ if (pWSHT == TRUE) {
 ```
 
 
+```{r Scheduling_per_System}
+dtTBCT <- 
+  dtTBTCO[JOBNAME        == "BI_PROCESS_TRIGGER" &
+          PERIODIC       == "X"                  &
+          STATUS         == "S"                  &
+          EVENTID        == "" ]                            %>%
+  dtTBTCP[., on = .(SYSTID, JOBNAME, JOBCOUNT, STEPCOUNT)]  %>%
+  .[, AUTHCKMAN := ifelse(SYSTID == "BD1", "100", "300")]   
+
+write.table(dtTBCT, 
+            file = "C:/Users/fpadt/OneDrive - GrandVision/Documents/RSPC_VAR.txt", 
+            sep = ";", row.names = FALSE, col.names = TRUE)
+
+# read.table(file = "C:\Users\fpadt\OneDrive - GrandVision\Documents\tblRSPC_CHAIN.txt", sep="")
+```
 

@@ -1,0 +1,76 @@
+---
+title: "CAB"
+author: "F.J.Padt"
+date: "October 24, 2017"
+output: beamer_presentation
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  eval    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  image   = TRUE,
+  results = "hide")
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# folder locations
+RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
+PRJ  <- file.path(RW  , "QAR")
+MOD  <- file.path(PRJ , "00_RProj")
+RAW  <- file.path(PRJ , "10_RawData")
+DAT  <- file.path(PRJ , "11_PrepData")
+RES  <- file.path(PRJ , "60_Results")
+FIG  <- file.path(PRJ , "70_Figures")
+MIG  <- file.path("C:", "Users", "fpadt", "GrandVision", 
+                  "iSynergy - 70. Migration") 
+
+#source('../pythia/SharedFunctions/GenericFunctions.R')
+invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
+
+# SAP systems to use
+pECC_SYST <- "RP1"
+pECC_CLNT <- "300"
+pBI_SYST  <- "BA1" 
+pBI_CLNT  <- "300"
+pLGCINDC  <- "C"
+
+dtMALG  <- fGetEXPTable(pTable  = "MALG" , pSystID = pECC_SYST, pClient = "300")
+dtTWGLV <- fGetEXPTable(pTable  = "TWGLV", pSystID = pECC_SYST, pClient = "300")
+dtTWWv  <- fGetEXPTable(pTable  = "TWWV" , pSystID = pECC_SYST, pClient = "300")
+
+dtMALG[, COUNTRY:= substr(LAYGR, 1, 2)]
+dtMALG <- dtMALG[COUNTRY == "NL"]
+
+```
+
+```{r  export}
+
+
+# Data Settings
+pXLSX    <- "ALL" 
+
+pWSHT    <- TRUE
+
+# Open Excel for storing results
+if (file.exists(paste0(RES, "/", pXLSX, ".xlsx")) == TRUE) {
+  invisible(file.remove(paste0(RES, "/", pXLSX, ".xlsx")))
+}
+
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtALL, 
+    RES, pXLSX, "ALL", pAppend = FALSE )}
+```
+
+```{r}
+
+
+
+
+```
+
