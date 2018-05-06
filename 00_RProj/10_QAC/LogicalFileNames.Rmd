@@ -1,0 +1,110 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Logical File Names"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "LogFile Names" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+```{r Import}
+
+dtFILENAMECI <- 
+  fRead_and_Union(
+    pType    = "B",
+    pTable   = "FILENAMECI", 
+    pOptions = list(), 
+    pFields  = list(
+      fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "FILENAMECI")))
+
+dtFILENAMECI <- 
+  fRead_and_Union(
+    pType    = "B",
+    pTable   = "FILENAMECI", 
+    pOptions = list(), 
+    pFields  = list(
+      fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "FILENAMECI")))
+
+dtFILEPATH <- 
+  fRead_and_Union(
+    pType    = "B",
+    pTable   = "FILEPATH", 
+    pOptions = list(), 
+    pFields  = list(
+      fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "FILEPATH")))
+
+dtFILESYS <- 
+  fRead_and_Union(
+    pType    = "B",
+    pTable   = "FILESYS", 
+    pOptions = list(), 
+    pFields  = list(
+      fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "FILESYS")))
+
+dtFILETEXTCI <- 
+  fRead_and_Union(
+    pType    = "B",
+    pTable   = "FILETEXTCI", 
+    pOptions = list(), 
+    pFields  = list(
+      fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "FILETEXTCI")))
+
+dtFSYSTXT <- 
+  fRead_and_Union(
+    pType    = "B",
+    pTable   = "FSYSTXT", 
+    pOptions = list(), 
+    pFields  = list(
+      fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "FSYSTXT")))
+
+dtPATH <- 
+  fRead_and_Union(
+    pType    = "B",
+    pTable   = "PATH", 
+    pOptions = list(), 
+    pFields  = list(
+      fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "PATH")))
+
+dtPATHTEXT <- 
+  fRead_and_Union(
+    pType    = "B",
+    pTable   = "PATHTEXT", 
+    pOptions = list(), 
+    pFields  = list(
+      fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "PATHTEXT")))
+
+```
+
+```{r Transform}
+
+```
+
+
+
+

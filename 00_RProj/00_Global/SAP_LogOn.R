@@ -7,7 +7,7 @@
 #   detach("package:reshape2", unload = TRUE)}
 
 library(RSAP      , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
-library(reshape2   , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+library(reshape2  , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 library(data.table, verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 library(magrittr  , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 
@@ -70,6 +70,7 @@ fCreateSAPConnection <-
     # Load connection parameters
     if (!exists(x = "dtSAP_LOGON")) {
       load(file = file.path(DAT, "SAP_LOGON.RData"))
+      # save(dtSAP_LOGON, file = file.path(DAT, "SAP_LOGON.RData"))
     }
     
     lcon <- 

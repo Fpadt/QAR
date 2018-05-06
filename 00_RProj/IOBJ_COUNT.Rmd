@@ -1,0 +1,27 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(readxl)
+library(data.table)
+library(magrittr)
+
+dtCOUNT <- 
+  read_xlsx(file.path("c:/c-temp/BI-COUNT.xlsx")) %>%
+  as.data.table() %T>%
+  setnames(c("TABLE", "RECS")) %>%
+  .[, c("CUST", "TABLE_PART") := tstrsplit(x = TABLE, "/", fixed = TRUE, keep = c(2,3))] %>%
+  .[ , `:=`( TYP  = substr(TABLE_PART, 1, 1),
+             IOBJ = substr(TABLE_PART, 2, nchar(TABLE_PART)))] %>%
+  dcast(CUST + IOBJ ~ TYP, fun = sum, value.var = "RECS") %T>%
+  setcolorder(c("CUST", "IOBJ", "S", "P", "T"))
+
+write.table(x    = dtCOUNT, 
+            file = file.path("c:", "c-temp", "IOBJ-COUNT.csv"),
+            sep  = ";",
+            col.names = TRUE, row.names = FALSE)
+shell.exec(file.path("c:", "c-temp", "IOBJ-COUNT.csv"))
+```
+

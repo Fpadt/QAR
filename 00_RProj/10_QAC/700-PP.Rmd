@@ -1,0 +1,44 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Production Planning"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+# parameters Settings
+pXLSX    <- "PP" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+```{r}
+pTable <- "AUFM"
+
+dtT <- 
+  fReadSAPTable(
+    pSystID  = "RU1",
+    pClient  = "300",
+    pTable   = pTable,
+    pOptions = list(),
+    pFields = fGetFields(pSYSTID = "RU1", pCLIENT = "300", pTable = pTable)
+    
+  )
+```
+

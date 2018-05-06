@@ -1,0 +1,62 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "ILG"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "ILG" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+```{r}
+dtILHCLNT <- 
+  fReadSAPTable(
+    pSystID = "BP1",
+    pClient = "300",
+    pTable  = "/BIC/PG1ILHCLNT",
+    pFields = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "/BIC/PG1ILHCLNT"))
+```
+
+
+```{r}
+dtILG <- 
+  fread(
+    file.path(
+      "C:" , "c-temp", 
+      "ILG", "Customer_extract_0004000195_20180319033039.TXT"), 
+    colClasses = "character" )                           %T>% 
+  setnames(gsub(pattern = "/"   , "", x = names(.))) %T>%
+  setnames(gsub(pattern = "\\s+", "", x = names(.))) %>%
+  .[grepl(pattern = "\\s+$", x = TownCity)]           
+
+print(dtILG[, .(ILGClientNumber, Filecreationdate, SubscriptionID, TownCity )])
+
+write.table(x = dtILG, file = "Customer_extract_0004000051_20180319040026_ERR")
+```
+
+

@@ -33,6 +33,22 @@
 # BAPI_CUBE_GETLIST
 # RRW3_GET_QUERY_VIEW_DATA
 # RSPC_API_CHAIN_SCHEDULE
+# OK - RSSEM_ADSO_GETLIST - List with ADSO's
+# OK - RSSEM_ADSO_GETDETAIL - Objects within an ADSO
+# RSZ_X_COMPONENT_LIST_FIND
+# RSZ_X_COMPONENT_LIST_GET
+# RSZ_X_RRI_LIST_GET
+# RSZ_X_VIEW_LIST_GET
+# RSZ_X_WHERE_USED_LIST_GETRS_VARIANT_DELETE_RFCRS_CREATE_VARIANT_RFC
+
+# con <- RSAPConnect(ashost="nplhost", sysnr="42", client="001", user="developer", passwd="developer", lang="EN", trace="1", lcheck="1")
+# 
+# con <- fGetSAPConnection(pSystId = "BU1", pClient = "300")
+# parms <- list('BYPASS_BUFFER' = 'X', 'MAX_ENTRIES' = 50, 'TABLE_NAME' = '"/BI0/HGL_ACCOUNT"')
+# res <- RSAPInvoke(con, "RFC_GET_TABLE_ENTRIES", parms) 
+# print(res$ENTRIES) 
+# 
+# RSAPClose(con)
 
 
 #### Library ####
@@ -108,7 +124,7 @@ fReadSAPTable <-
 
   lcon <- fGetSAPConnection(pSystId = pSystID, pClient = pClient)
   
-  # Get Fields from Library
+  # Get Fields from Library if missing or empty list
   if (missing(pFields) | length(pFields) == 0) {
     pFields <- 
       fGetFields(
@@ -244,7 +260,7 @@ fLoad_dtDD_SLCT <-
   }
 
 fRead_and_Union <- 
-  function(pSIDCLNT, pTable, pOptions, pFields, pEnv, pType){
+  function(pSIDCLNT, pTable, pOptions, pFields = list(), pEnv, pType){
     
     if (missing(pSIDCLNT)) {   
       pSID.lng <- fGetSID(pEnv, pType)
@@ -407,3 +423,45 @@ fChar2Num <- function(x){
   return(as.numeric(y))
   
 }
+
+# ---- Retrieve Lists with ADSO's ----
+# details of ADSO can be get with RSSEM_ADSO_GETDETAIL per ADSO
+fGetLIST_ADSO <- 
+  function(pSystID, pClient){
+    
+    lcon <- fGetSAPConnection(pSystId = pSystID, pClient = pClient)
+
+    if (!RSAPValidHandle(lcon))
+      stop("argument is not a valid RSAP con")
+    
+    dtTABLE <- 
+      RSAPInvoke(lcon, "RSSEM_ADSO_GETLIST", parms = list()) %>%
+      .[["ADSOLIST"]] %>%
+      as.data.table() %>%
+      .[, `:=`(SYSTID = pSystID, CLIENT = pClient)]
+    
+    for (j in colnames(dtTABLE)) {
+      set(dtTABLE, j = j, 
+          value = stringr::str_trim(dtTABLE[[j]]))}
+    
+    
+    return(dtTABLE)
+  }
+
+# ----- Count number of Records in a Table -----
+fCountRecordsSAPTables <- 
+  function(pSystID, pClient, pTables){
+    
+    lcon <- fGetSAPConnection(pSystId = pSystID, pClient = pClient)
+
+    if (!RSAPValidHandle(lcon))
+      stop("argument is not a valid RSAP con")
+    
+    parms <- list('IT_TABLES' = list('TABNAME' = pTables))
+    res   <- RSAPInvoke(lcon, "EM_GET_NUMBER_OF_ENTRIES", parms)    
+
+    return(res)
+  }
+
+#parms <- list('BYPASS_BUFFER' = 'X', 'MAX_ENTRIES' = 50, 'TABLE_NAME' = 'T005')
+#res <- RSAPInvoke(con, "RFC_GET_TABLE_ENTRIES", parms) print(res$ENTRIES) RSAPClose(con)

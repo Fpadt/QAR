@@ -1,0 +1,76 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Process Chains "
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "RSPC-Schedule" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+```{r}
+library(readr)
+dtDD03L <- read_delim("~/RW/GV_ryk/10_RawData/DD03L.txt", 
+    "\t", escape_double = FALSE, trim_ws = TRUE) %>%
+  as.data.table()
+
+setnames(dtDD03L, 
+         gsub(x      = names(dtDD03L), 
+         replacement = "",
+         pattern = " "))
+         
+View(fTableOverview(dtDD03L)$dtRATIO)
+```
+
+```{r}
+dtT1 <- copy(dtDD03L)
+dtT2 <- copy(dtDD03L)
+
+dtT1[1, "TableName"] <- "me"
+
+
+
+dtE <- 
+  expand.grid(T1 = names(dtT1), 
+              T2 = names(dtT2), 
+              stringsAsFactors = FALSE) %>%
+  as.data.table() %>%
+  # .[T1 != T2]     %>%
+  .[, IDX := 1:.N]  %>%
+  .[T1 == "TableName"] %>%
+  .[T2 == "TableName"]
+  
+dtE1 <- 
+  dtE[, .(MATCH = as.numeric
+          (fGetMatch(
+    dtT1[, eval(.SD$T1), with = F],
+    dtT2[, eval(.SD$T2), with = F]))), 
+    by = .(IDX)] %>%
+  dtE[., on = .(IDX)]
+```
+

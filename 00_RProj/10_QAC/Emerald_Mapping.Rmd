@@ -1,0 +1,70 @@
+---
+title: "Quality Assurance Report"
+subtitle: 'EMERALD Mapping)'
+author: "F.J. Padt"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '4'
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = FALSE)
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+library(readxl)
+
+# parameters Settings
+pXLSX    <- "QAR-Emerald" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+```
+
+```{r IMPORT}
+
+dtZFIAR_ACM <- 
+  fReadSAPTable(
+  pSystID = "RU1", 
+  pClient = "300",
+  pTable = "ZFIAR_ACM",
+  pOptions = list(),
+  pFields = fGetFields(pSYSTID = "RU1", pCLIENT = "300", pTable = "ZFIAR_ACM"))
+
+dtZFIAR_ADM <- 
+  fReadSAPTable(
+  pSystID = "RU1", 
+  pClient = "300",
+  pTable = "ZFIAR_ADM",
+  pOptions = list(),
+  pFields = fGetFields(pSYSTID = "RU1", pCLIENT = "300", pTable = "ZFIAR_ADM"))
+
+dtZFIAR_CC <- 
+  fReadSAPTable(
+  pSystID = "RU1", 
+  pClient = "300",
+  pTable = "ZFIAR_CC",
+  pOptions = list(),
+  pFields = fGetFields(pSYSTID = "RU1", pCLIENT = "300", pTable = "ZFIAR_CC"))
+
+
+```
+
+

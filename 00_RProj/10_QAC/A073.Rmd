@@ -1,0 +1,80 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "A073 "
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "A073" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+
+```{r A073}
+T1 <- Sys.time()
+
+dtA073  <-
+  fReadSAPTable(
+    pSystID  = "RP1",
+    pClient  = "300", 
+    pTable   = "A073",
+    pOptions = list(),
+    pFields  = list("DATAB", "DATBI", "KAPPL", "KNUMH", "KSCHL", "MANDT", "MATNR", "VKORG", "VRKME", "VTWEG"))
+Sys.time() - T1
+
+T1 <- Sys.time()
+dtA073_BW  <-
+  fReadSAPTable(
+    pSystID  = "BP1",
+    pClient  = "300", 
+    pTable   = "/BIC/AG1MDPD192",
+    pOptions = list(paste0("/BIC/G1ATAB", "='A073'")),
+    pFields  = list("DATEFROM"  , "DATETO"   , "KAPPL"   , "CONDRECNO", 
+                    "KNART"     , "MATERIAL" , "SALESORG", "COND_UNIT", 
+                    "DISTR_CHAN", "INFO_TYPE"))
+Sys.time() - T1
+
+# fWriteToSheet(
+#   dtA073, 
+#   RES, pXLSX, "A073", pAppend = FALSE )
+# shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
+
+# write.table(dtRSPCALIGN, 
+            # file = file.path(RES, "dtRSPCALIGN.csv"), row.names = F, col.names = T, sep = ";")
+# shell.exec(file.path(RES))
+```
+
+```{r}
+load("~/RW/QAR/A073.RData")
+dtAMS <- 
+  read_xlsx(file.path("..", "..", "10_RawData", "COND.XLSX")) %>%
+  as.data.table()  %>% 
+  .[, KNUMH:= as.character(as.integer(CONDRECNO))]
+
+View(dtA073[dtAMS, on = .(KNUMH), nomatch = NA])
+```
+

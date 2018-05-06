@@ -1,0 +1,312 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Inactive Objects"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "InActive-Objects" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+lstVERS <- list("OBJVERS <> 'D'") #"OBJSTAT = 'INA'", "AND", 
+lstLANG <- list("LANGU = 'EN'") #"OBJSTAT = 'INA'", "AND", 
+
+```
+
+    g_t_cube,
+    g_t_iobj,
+    g_t_updr,
+    g_t_ods,
+    g_t_ohd,
+    g_t_dtp,
+    g_t_stru,
+    g_t_apd,
+    g_t_copr,
+    g_t_tadir,
+    
+```{r add_new_read_ZTBW_INA_SNAP}
+load(file = file.path("..", "..", "11_PrepData", "dtZTBW_INA_SNAP.RData"))
+
+dtZTBW_INA_SNAP_N <- 
+  fReadSAPTable(
+    pSystID  = "BP1",
+    pClient  = "300", 
+    pTable   = "ZTBW_INA_SNAP",
+    pOptions = list(),
+    pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "ZTBW_INA_SNAP"))
+
+dtZTBW_INA_SNAP <- 
+  rbindlist(list(dtZTBW_INA_SNAP, dtZTBW_INA_SNAP_N)) %>%
+  unique(.)
+
+save(dtZTBW_INA_SNAP, file = file.path("..", "..", "11_PrepData", "dtZTBW_INA_SNAP.RData"))
+
+pXLSX <- "ZTBW_INA_SNAP"
+if (pWSHT == TRUE) {
+  fWriteToSheet(
+    dtZTBW_INA_SNAP, 
+    RES, pXLSX, "SNAPSHOT", pAppend = FALSE )}
+shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
+```
+
+## Cubes
+    
+```{r}
+
+
+dtRSDCUBE <- 
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSDCUBE",
+    pOptions = lstVERS,
+    pFields  = list("INFOCUBE", "OBJVERS", "OBJSTAT",
+                    "CUBETYPE", "TSTPNM" , "TIMESTMP")) %>%
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSDCUBET",
+    pOptions = lstLANG,
+    pFields  = list("INFOCUBE", "OBJVERS", "TXTLG"))[
+      ., on = .(SYSTID, CLIENT, INFOCUBE, OBJVERS), nomatch = NA]
+
+
+```
+    
+## InfoObjects
+
+```{r}
+
+dtRSDIOBJ <- 
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSDIOBJ",
+    pOptions = lstVERS,
+    pFields  = list("IOBJNM", "OBJVERS", "OBJSTAT", 
+                    "IOBJTP", "TSTPNM", "TIMESTMP")) %>%
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSDIOBJT",
+    pOptions = lstLANG,
+    pFields  = list("IOBJNM", "OBJVERS", "TXTLG"))[
+      ., on = .(SYSTID, CLIENT, IOBJNM, OBJVERS), nomatch = NA]
+
+
+
+```
+
+## Transformations
+
+    SELECT tranid tranid AS obj_name sourcename
+           orgtranid AS org_obj_name           " +<DBORGIE_03062015>
+           targetname tstpnm timestmp
+       FROM rstran
+
+```{r}
+
+dtRSTRAN <- 
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSTRAN",
+    pOptions = lstVERS,
+    pFields  = list("TRANID"   , "OBJVERS"   , "OBJSTAT", "SOURCENAME",
+                    "ORGTRANID", "TARGETNAME", "TSTPNM" , "TIMESTMP")) 
+
+
+
+```
+
+## Update Rules
+
+Used in Technical Content
+     
+```{r}
+
+dtRSUPDINFO <- 
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSUPDINFO",
+    pOptions = lstVERS,
+    pFields  = list("UPDID"  , "OBJVERS" , "OBJSTAT", 
+                    "ISOURCE", "INFOCUBE", "TSTPNM" , "TIMESTMP"))  
+
+```
+
+## ODSO
+
+    SELECT o~odsobject o~odsobject AS obj_name o~odsotype
+           o~tstpnm o~timestmp t~txtlg
+     INTO CORRESPONDING FIELDS OF TABLE g_t_ods
+      FROM rsdodso
+      
+     
+```{r}
+
+dtRSDODSO <- 
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSDODSO",
+    pOptions = lstVERS,
+    pFields  = list("ODSOBJECT", "OBJVERS",  
+                    "ODSOTYPE" , "TSTPNM" , "TIMESTMP")) %>%
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSDODSOLOC",
+    pOptions = list(),
+    pFields  = list("ODSOBJECT", "OBJSTAT", "ACTIVFL"))[
+      ., on = .(SYSTID, CLIENT, ODSOBJECT), nomatch = 0] %>%
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RSDODSOT",
+    pOptions = lstLANG,
+    pFields  = list("ODSOBJECT", "OBJVERS", "TXTLG"))[
+      ., on = .(SYSTID, CLIENT, ODSOBJECT, OBJVERS), nomatch = NA]
+
+
+
+```
+
+## ADSO
+
+The following list shows all ADSO's in the system. 
+The inactive ADSO's are shown at the top (if any) and ADSO are sorted alphabetical within
+their OBJSTAT
+      
+```{r}
+ 
+dtRSOADSO <-
+  fGetLIST_ADSO(pSystID = "BP1", "300") %>%
+  fReadSAPTable(
+    pSystID  = "BP1",
+    pClient  = "300", 
+    pTable   = "RSOADSOLOC",
+    pOptions = list(),
+    pFields  = list("ADSONM", "OBJSTAT", "ACTIVFL"))[
+      ., on = .(SYSTID, CLIENT, ADSONM = OBJNM), nomatch = 0] %T>%
+  setorder(-OBJSTAT, ADSONM)
+
+knitr::kable(dtRSOADSO[
+  OBJSTAT == "ACT", .(ADSONM, OBJSTAT, ACTIVFL, TXTLG)])
+```
+
+## Open Hub
+
+    SELECT o~ohdest o~ohdest AS obj_name o~desttype
+           o~tstpnm o~timestmp t~txtlg
+     INTO CORRESPONDING FIELDS OF TABLE g_t_ohd
+      FROM rsbohdest AS o
+      LEFT OUTER JOIN rsbohdestt AS t
+      ON  t~ohdest  = o~ohdest
+      AND t~objvers = o~objvers
+      AND t~langu   = sy-langu
+      
+```{r}
+RSB_API_OHS_DEST_GETLIST
+```
+
+      
+## DTPs
+
+    SELECT a~dtp a~dtp AS obj_name b~src b~tgt
+           b~dtptype b~tstpnm b~timestmp b~dtp_original AS org_obj_name
+     INTO CORRESPONDING FIELDS OF TABLE g_t_dtp
+     FROM rsbkdtpstat AS a
+
+     INNER JOIN rsbkdtp AS b
+      ON a~dtp = b~dtp
+    WHERE a~objstat = gc_objstat_ina.
+    
+## Transfer Structures
+
+    SELECT transtru transtru AS obj_name logsys tstpnm timestmp
+      FROM rsts
+      
+## ADP
+
+    SELECT a~process a~process AS obj_name a~tstpnm a~timestmp t~txtlg
+      FROM rsant_process AS a
+      LEFT OUTER JOIN rsant_processt AS t
+
+## COPR
+
+    SELECT copr~objnm       AS objnm
+           copr~objnm       AS obj_name
+           copr~changedby   AS tstpnm
+           copr~changedat   AS timestmp
+           t~description    AS txtlg
+           copr~objvers
+
+       FROM rsltip AS copr
+
+       LEFT OUTER JOIN rsltipt AS t
+
+## HCPR
+
+    SELECT hcpr~hcprnm      AS objnm
+           hcpr~hcprnm      AS obj_name
+           hcpr~tstpnm
+           hcpr~timestmp
+           t~description    AS txtlg
+           hcpr~objvers
+
+       FROM rsohcpr AS hcpr
+
+     LEFT OUTER JOIN rsohcprt AS t
+     
+```{r}
+# Error
+dtRSOHCPR <- 
+  # fReadSAPTable(
+  #   pSystID  = "BA1",
+  #   pClient  = "300", 
+  #   pTable   = "RSOHCPR",
+  #   pOptions = lstVERS,
+  #   pFields  = list("HCPRNM", "OBJVERS",  
+  #                   "TSTPNM", "TIMESTMP")) %>%
+  fReadSAPTable(
+    pSystID  = "BA1",
+    pClient  = "300", 
+    pTable   = "RVPHCPR",
+    pOptions = lstLANG,
+    pFields  = list("HCPRNAME"))
+# [
+#       ., on = .(SYSTID, CLIENT, HCPRNM, OBJVERS), nomatch = NA]
+
+
+
+```
+      
+      
+## Queries
+
+RSCRM_IMP_EXEC_QUERY_READ_DATA

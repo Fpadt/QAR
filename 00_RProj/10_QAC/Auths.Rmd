@@ -106,6 +106,7 @@ dtAUTH       <-
     ))
 
 dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+
 write.table(
   dtRES, file = "c:/c-temp/RES.csv",
   sep = ";", row.names = FALSE, col.names = TRUE)
@@ -114,7 +115,9 @@ write.table(
   dtAUTH, file = "c:/c-temp/auth.csv",
   sep = ";", row.names = FALSE, col.names = TRUE)
 
- # shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
+
+
+shell.exec(file.path("c:/c-temp/RES.csv"))
  
 # Error in `[[<-.data.frame`(`*tmp*`, f, value = character(0)) : 
 #   replacement has 0 rows, data has 995
@@ -158,13 +161,14 @@ dtUSR_AGR <-
   setnames(c("TO_DAT"), c("AGR_TO_DAT"))
 
 dtAUTH <- 
-  dtUSR                                                        %>%
-  .[dtSAPDUMMY, on = .(BNAME)]                                 %>%
-  dtUSR_AGR[., on = .(SYSTID, MANDT, UNAME = BNAME)]           %>%
-  dtUSR_GRP[., on = .(SYSTID, MANDT, BNAME = UNAME)]
+  dtUSR_AGR[dtUSR, on = .(SYSTID, MANDT, UNAME = BNAME)]      %>%
+  dtUSR_GRP[., on = .(SYSTID, MANDT, BNAME = UNAME), allow.cartesian = TRUE]
 
-fWriteToSheet(
-  dtAUTH, RES, pXLSX, "Auth", pAppend = FALSE )
+write.table(
+  dtAUTH, file = "c:/c-temp/auth2.csv",
+  sep = ";", row.names = FALSE, col.names = TRUE)
+
+shell.exec(file.path("c:/c-temp/auth2.csv"))
 
 ```
 

@@ -1,6 +1,6 @@
 ---
 title   : "Quality Assurance Report"
-subtitle: "Process Chains "
+subtitle: "A073 "
 author  : "F.J. Padt"
 date    : "`r format(Sys.time(), '%B %d, %Y')`"
 output:
@@ -21,10 +21,9 @@ editor_options:
 # gc()
 
 # parameters Settings
-pXLSX    <- "RSPC-Schedule" 
+pXLSX    <- "A073" 
 pWSHT    <- TRUE
 newfiles <- TRUE
-BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
 
 # KnitR SetUp location
 KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
@@ -50,7 +49,6 @@ dtLISO <-
                    'PRDMINS'  , 'PRDHOURS' , 'PRDDAYS', 'PRDWEEKS' ,'PRDMONTHS',
                    'EVENTID'  , 'EVENTPARM',
                    'AUTHCKMAN'))
-
 dtLISP <- 
   fRead_and_Union(
     pType    = "R",
@@ -65,36 +63,18 @@ dtLISC <-
   dtLISO[dtLISP, on = .(SYSTID, CLIENT, JOBNAME, JOBCOUNT),
           nomatch = NA]
 
-dtLIS <- 
-  dcast.data.table(
-    data = dtLISC,
-    formula = PROGNAME + SDLSTRTDT + SDLSTRTTM + PRDMINS ~ SYSTID,
-    fun.aggregate = length,
-    value.var = "SYSTID") %>%
-  setcolorder(
-    c("PROGNAME",  "SDLSTRTDT",  "SDLSTRTTM",  "PRDMINS", 
-      "RD1", "RA1", "RU1", "RP1", "RS1")) %T>%
-  View()
-
-write.table(
-  dtLIS, 
-  file = paste0(BIDOCsrc, "LIS.csv"))
-
 pXLSX    <- "LIS-JOBS" 
 if (pWSHT == TRUE) {
   fWriteToSheet(
     dtLISC, 
     RES, pXLSX, "LIS", pAppend = FALSE )}
 shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))
-
-
 ```
 
 ```{r CreateSchedule}
 # SID.lng  <- c("BA1300") #, "BTP300", "BU1300")
 # SID.lng  <- c("BS1300", "BD1100", "BU1300", "BA1300", "BP1300") 
 # SID.sht  <- substr(SID.lng, 1, 3)
-dtSAP_LOGON[ systid == "BS1", type := "BS"]
 
 T1 <- Sys.time()
 
@@ -161,26 +141,6 @@ dtSCHED[, SDLSTRTTM := paste(
 Sys.time() - T1
 # fCloseAllSAPConnections()
 
-# Create Pivot
-dtPIVOT <- 
-  dcast.data.table(
-    data = dtSCHED,
-    formula = CHAIN + SDLSTRTDT + SDLSTRTTM + 
-      PRDMINS + PRDHOURS + PRDDAYS + PRDWEEKS + PRDMONTHS ~ SYSTID,
-    fun.aggregate = length,
-    value.var = "SYSTID")                    %>%  
-  .[, Total := BD1 + BA1 + BU1 + BP1]        %T>%
-  setcolorder(
-    c("CHAIN", "SDLSTRTDT", "SDLSTRTTM", "PRDMINS", "PRDHOURS", "PRDDAYS", "PRDWEEKS", "PRDMONTHS",
-      "BD1", "BA1", "BU1", "BP1", "Total"))  %T>%
-  View()
-
-write.table(
-  dtPIVOT, 
-  file = paste0(BIDOCsrc, "RSPC.csv"),
-  sep = ";", row.names = FALSE)
-shell.exec(paste0(BIDOCsrc, "RSPC.csv"))
-
 pXLSX    <- "RSPC-Schedule" 
 if (pWSHT == TRUE) {
   fWriteToSheet(
@@ -203,61 +163,40 @@ dtRSPCLOGCHAIN <-
            as.data.table = TRUE) %>%
   .[DATUM < max(DATUM)]
 
-cutOff <- format(max(dtRSPCLOGCHAIN$DATUM), "%Y%m%d")
+cutOff <- format(max(dtRSPCLOGCHAIN$DATUM)), "%Y%m%d")
 
 dtRSPCLOGCHAIN_N  <-
   fReadSAPTable(
     pSystID  = "BP1",
     pClient  = "300", 
     pTable   = "RSPCLOGCHAIN",
-    pOptions = list(paste0("DATUM > '", cutOff , "'")),
-    pFields  = as.list(setdiff( names(dtRSPCLOGCHAIN), c("SYSTID", "CLIENT")))) %>%
-  .[ , DATUM := ymd(DATUM)]
+    pOptions = list("DATUM > '", , "'"),
+    pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCLOGCHAIN"))
 
 dtRSPCLOGCHAIN <- 
   rbindlist(
     list(dtRSPCLOGCHAIN, dtRSPCLOGCHAIN_N))
-save(dtRSPCLOGCHAIN,      file = file.path("..", "..", "11_PrepData", "dtRSPCLOGCHAIN.RData"))
-write.fst(dtRSPCLOGCHAIN, path = file.path("..", "..", "11_PrepData", "dtRSPCLOGCHAIN.fst"))
+# save(dtRSPCLOGCHAIN,     file.path("..", "..", "11_PrepData", "dtRSPCLOGCHAIN.RData"))
+# write.fst(dtRSPCLOGCHAIN,file.path("..", "..", "11_PrepData", "dtRSPCLOGCHAIN.fst"))
+
 
 # load(file.path("..", "..", "11_PrepData", "dtRSPCPROCESSLOG.RData"))
 dtRSPCPROCESSLOG <- 
-  read.fst(file.path("..", "..", "11_PrepData", "dtRSPCPROCESSLOG.fst"),
-           as.data.table = TRUE) %>%
-  .[BATCHDATE < max(BATCHDATE)]
-
-cutOff <- max(dtRSPCPROCESSLOG$BATCHDATE)
-
+  read.fst(file.path("..", "..", "11_PrepData", "dtRSPCPROCESSLOG.fst"))
 dtRSPCPROCESSLOG_N  <-
   fReadSAPTable(
     pSystID  = "BP1",
     pClient  = "300", 
     pTable   = "RSPCPROCESSLOG",
-    pOptions = list(paste0("BATCHDATE > '", cutOff , "'")),
-    pFields  = as.list(setdiff( names(dtRSPCPROCESSLOG), c("SYSTID", "CLIENT"))))
-
+    pOptions = list("BATCHDATE > '20171231'"),
+    pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCPROCESSLOG"))
 dtRSPCPROCESSLOG <- 
   rbindlist(
     list(dtRSPCPROCESSLOG, dtRSPCPROCESSLOG_N))
-save(dtRSPCPROCESSLOG,      file = file.path("..", "..", "11_PrepData", "dtRSPCPROCESSLOG.RData"))
-write.fst(dtRSPCPROCESSLOG, path = file.path("..", "..", "11_PrepData", "dtRSPCPROCESSLOG.fst"))
-
-rm(dtRSPCLOGCHAIN_N)
-rm(dtRSPCPROCESSLOG_N)
-
-```
-
-```{r}
-dtRSPCLOG <- 
-  dtRSPCLOGCHAIN[dtRSPCPROCESSLOG, on = .(SYSTID, CLIENT, LOG_ID )]
-dtT <- dtRSPCLOG[CHAIN_ID == "G1_PC_TR_FI_FIGL" &
-                 DATUM == "2017-10-31"          &
-                 ZEIT   == "000015"]
-
-```
+# save(dtRSPCPROCESSLOG,      file.path("..", "..", "11_PrepData", "dtRSPCPROCESSLOG.RData"))
+write.fst(dtRSPCPROCESSLOG, file.path("..", "..", "11_PrepData", "dtRSPCPROCESSLOG.fst"))
 
 
-```{r}
 # dtRSPCLOGCHAIN  <-
 #   fRead_and_Union(
 #     pSID.lng = SID.lng,
@@ -271,25 +210,29 @@ dtT <- dtRSPCLOG[CHAIN_ID == "G1_PC_TR_FI_FIGL" &
   fRead_and_Union(
     pType    = "B",
     pTable   = "RSPCCHAIN",
-    pOptions = list("OBJVERS = 'A'"))
+    pOptions = list("OBJVERS = 'A'"),
+    pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCCHAIN"))
 
 dtRSPCCHAINT    <- 
   fRead_and_Union(
     pType    = "B",
     pTable   = "RSPCCHAINT",
-    pOptions = list("OBJVERS = 'A'", "AND", "LANGU = 'E'"))
+    pOptions = list("OBJVERS = 'A'", "AND", "LANGU = 'E'"),
+    pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCCHAINT"))
 
 dtRSPCCHAINATTR <- 
   fRead_and_Union(
     pType    = "B",
     pTable   = "RSPCCHAINATTR",
-    pOptions = list("OBJVERS = 'A'"))
+    pOptions = list("OBJVERS = 'A'"),
+    pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCCHAINATTR"))
 
 dtRSPCTRIGGER   <- 
   fRead_and_Union(
     pType    = "B",
     pTable   = "RSPCTRIGGER",
-    pOptions = list("OBJVERS = 'A'"))
+    pOptions = list("OBJVERS = 'A'"),
+    pFields  = fGetFields(pSYSTID = "BP1", pCLIENT = "300", pTable = "RSPCTRIGGER"))
 
 dtBP1 <- 
   copy(dtSCHED)                             %>%
@@ -332,7 +275,7 @@ fWriteToSheet(
   dtZDB_CA_GV001, 
   RES, pXLSX, "ZDB_CA_GV001", pAppend = FALSE )
 shell.exec(file.path(RES, paste0(pXLSX, ".xlsx")))  
-
+  
 ```
 
 
@@ -611,20 +554,6 @@ dtRSADMIN   <-
 
 View(dtRSADMIN[OBJECT == "PSEUDO_D_AFTER_IMPORT_D"  , .(SYSTID, CLIENT, OBJECT, VALUE)])
 View(dtRSADMIN[OBJECT == "BW_NO_AGGRJOIN_@3G1GLMP02", .(SYSTID, CLIENT, OBJECT, VALUE)])
-```
-
-```{r Upgrade RSBASIDOC }
-dtRSBASIDOC_P   <- 
-  fRead_and_Union(
-    pEnv = "P",
-    pTable   = "RSBASIDOC",
-    pOptions = list(),
-    pFields  = fGetFields(pSYSTID = "BP1", 
-                          pCLIENT = "300", 
-                          pTable  = "RSBASIDOC")) 
-
-# View(dtRSADMIN[OBJECT == "PSEUDO_D_AFTER_IMPORT_D"  , .(SYSTID, CLIENT, OBJECT, VALUE)])
-# View(dtRSADMIN[OBJECT == "BW_NO_AGGRJOIN_@3G1GLMP02", .(SYSTID, CLIENT, OBJECT, VALUE)])
 ```
 
 ```{r USER}

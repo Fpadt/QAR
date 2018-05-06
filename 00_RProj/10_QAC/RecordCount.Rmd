@@ -1,0 +1,47 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Record Count"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+# parameters Settings
+pXLSX    <- "RecordCount" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+```{r}
+pSystID <- "RP1"
+pClient <- "300"
+
+dtCNT <- 
+  read_xlsx(path = file.path(RAW, paste(pXLSX, "xlsx", sep = "."))) %>%
+  as.data.table()             %>%
+  .[, trimws(TABLE, "both")]  %>%
+  as.list()                   %>%
+  fCountRecordsSAPTable(pSystID = pSystID, pClient =  pClient, pTables = .)
+
+fWriteToSheet(
+  dtCNT[[1]], 
+  RES, pXLSX, "Count", pAppend = FALSE )
+
+
+```
