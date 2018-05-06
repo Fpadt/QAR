@@ -16,6 +16,7 @@ DAT  <- file.path(PRJ, "11_PrepData")
 ANA  <- file.path(PRJ, "30_Analysis")
 RES  <- file.path(PRJ, "60_Results")
 FIG  <- file.path(PRJ, "70_Figures")
+SAP  <- DAT 
 
 # Load functions
 invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
