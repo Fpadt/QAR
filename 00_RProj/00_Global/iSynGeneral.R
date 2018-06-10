@@ -17,6 +17,12 @@ library(lubridate , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 
 library(magrittr  , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
 library(fst       , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+library(RCurl     , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+library(readr     , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+library(tidyverse , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+library(purrr     , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+
+
 # library(forecast)
 # library(fpp)
 # library(RODBC     , verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
@@ -679,3 +685,13 @@ fAlignDS <- function(pDT, pDS, pSystID = "BP1", pClient = "300"){
   return(dtDATA)
   
 }
+
+fOpen_in_Excel <- 
+  function(pDT, pPath = getwd(), pFN){
+    pFFN <- file.path(pPath, pFN)
+    write.table(
+      x = pDT,
+      file = pFFN, 
+      sep = ";", row.names = F)
+    shell.exec(normalizePath(pFFN))    
+  }
