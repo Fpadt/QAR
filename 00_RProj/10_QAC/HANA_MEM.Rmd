@@ -51,12 +51,12 @@ invisible(source(KS))
 
 ```{r Import}
 pTable <- "/BIC/AG1MNPD0100"
-dtPSA <-
+
+dtMEM <-
   fRead_and_Union(
     pSIDCLNT = "BP1300",
-    pTable   = pTable,
-    pOptions = list(),
-    pFields  = fGetFields(pSYSTID = "BP1", pTable = pTable, pCLIENT = "300"))
+    pTable   = pTable) %>%
+  setnames(gsub(pattern = "/BIC/", replacement = "", x = names(.)))
 
 ```
 

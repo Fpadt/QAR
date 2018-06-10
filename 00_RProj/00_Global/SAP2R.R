@@ -262,7 +262,7 @@ fLoad_dtDD_SLCT <-
   }
 
 fRead_and_Union <- 
-  function(pSIDCLNT, pTable, pOptions, pFields = list(), pEnv, pType){
+  function(pSIDCLNT, pTable, pOptions = list(), pFields = list(), pEnv, pType){
     
     if (missing(pSIDCLNT)) {   
       pSID.lng <- fGetSID(pEnv, pType)

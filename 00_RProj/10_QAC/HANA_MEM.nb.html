@@ -11,7 +11,7 @@
 
 <meta name="author" content="F.J. Padt" />
 
-<meta name="date" content="2018-06-07" />
+<meta name="date" content="2018-06-10" />
 
 <title>Quality Assurance Report</title>
 
@@ -172,7 +172,7 @@ $(document).ready(function () {
 <h1 class="title toc-ignore">Quality Assurance Report</h1>
 <h3 class="subtitle"><em>HANA Memory</em></h3>
 <h4 class="author"><em>F.J. Padt</em></h4>
-<h4 class="date"><em>June 07, 2018</em></h4>
+<h4 class="date"><em>June 10, 2018</em></h4>
 
 </div>
 
@@ -194,6 +194,28 @@ $(document).ready(function () {
 <h1>Objective</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyAjIENsZWFuc2UgbWVtb3J5XG4jIHJtKGxpc3QgPSBscygpKVxuIyBnYygpXG4jIHBhcmFtZXRlcnMgU2V0dGluZ3NcbnBYTFNYICAgIDwtIFwiXCIgXG5wV1NIVCAgICA8LSBUUlVFXG5uZXdmaWxlcyA8LSBUUlVFXG5CSURPQ3NyYyA8LSBub3JtYWxpemVQYXRoKFwifi8uLi8uLi9HcmFuZFZpc2lvbi9TQVAgQkkgZG9jdW1lbnRhdGlvbiAtIERvY3VtZW50cy9iaS1kb2Mvc3JjL1wiKVxuIyBLbml0UiBTZXRVcCBsb2NhdGlvblxuS1MgICA8LSBmaWxlLnBhdGgoXCJ+XCIsIFwiUldcIixcbiAgICAgICAgICAgICAgICAgIFwiUUFSXCIsIFwiMDBfUlByb2pcIiwgXCIwMF9HbG9iYWxcIiwgXCJLbml0Ul9TZXRVcC5SXCIpXG4jIExvYWQgZnVuY3Rpb25zXG5pbnZpc2libGUoc291cmNlKEtTKSlcbiMgRlRQIC0gQ29ubmVjdGlvbiB0byBHViBGaWxlU2VydmVyXG4jIENvbnN0YW50c1xuIyBmb2xkZXIgIDwtIFwiL2JpL2liL21kXCIgICAgICAgICAgXG4jIGxmb2xkZXIgPC0gZmlsZS5wYXRoKFwiLi5cIiwgZm9sZGVyKSAgIyBsb2NhbCBmb2xkZXJcbiMgZnN1cmwgICA8LSBwYXN0ZTAoXG4jICAgXCJmdHA6Ly9mcy5ncmFuZHZpc2lvbi5jb20vcHl0aGlhL1wiLCBmb2xkZXIpXG4jIHVzZXJwd2QgPC0gcGFzdGUoXCJmdHBicDFcIiwgcGFyYW1zJHBhc3N3b3JkLCBzZXAgPSBcIjpcIilcbmBgYCJ9 -->
+<pre class="r"><code># # Cleanse memory
+# rm(list = ls())
+# gc()
+# parameters Settings
+pXLSX    &lt;- &quot;&quot; 
+pWSHT    &lt;- TRUE
+newfiles &lt;- TRUE
+BIDOCsrc &lt;- normalizePath(&quot;~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/&quot;)
+# KnitR SetUp location
+KS   &lt;- file.path(&quot;~&quot;, &quot;RW&quot;,
+                  &quot;QAR&quot;, &quot;00_RProj&quot;, &quot;00_Global&quot;, &quot;KnitR_SetUp.R&quot;)
+# Load functions
+invisible(source(KS))
+# FTP - Connection to GV FileServer
+# Constants
+# folder  &lt;- &quot;/bi/ib/md&quot;          
+# lfolder &lt;- file.path(&quot;..&quot;, folder)  # local folder
+# fsurl   &lt;- paste0(
+#   &quot;ftp://fs.grandvision.com/pythia/&quot;, folder)
+# userpwd &lt;- paste(&quot;ftpbp1&quot;, params$password, sep = &quot;:&quot;)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -201,6 +223,14 @@ $(document).ready(function () {
 <h1>Data Import</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucFRhYmxlIDwtIFwiL0JJQy9BRzFNTlBEMDEwMFwiXG5kdE1FTSA8LVxuICBmUmVhZF9hbmRfVW5pb24oXG4gICAgcFNJRENMTlQgPSBcIkJQMTMwMFwiLFxuICAgIHBUYWJsZSAgID0gcFRhYmxlKSAlPiVcbiAgc2V0bmFtZXMoZ3N1YihwYXR0ZXJuID0gXCIvQklDL1wiLCByZXBsYWNlbWVudCA9IFwiXCIsIHggPSBuYW1lcyguKSkpXG5gYGAifQ== -->
+<pre class="r"><code>pTable &lt;- &quot;/BIC/AG1MNPD0100&quot;
+dtMEM &lt;-
+  fRead_and_Union(
+    pSIDCLNT = &quot;BP1300&quot;,
+    pTable   = pTable) %&gt;%
+  setnames(gsub(pattern = &quot;/BIC/&quot;, replacement = &quot;&quot;, x = names(.)))</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -215,6 +245,18 @@ $(document).ready(function () {
 <h1>Transform</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBtYWtlIFVuaXF1ZVxuZHRMR1JfQ1NWIDwtIFxuICAgZHRMR1JbLCAuKExHUiA9IG1heChMR1IpKSwgYnkgPSAuKFNJVEUsIEFSVCldXG5cbiMgdW5pb24gXG5kdExHUl9DTUIgPC0gXG4gIHJiaW5kbGlzdChcbiAgICBsaXN0KCBkdExHUl9CUDEsIGR0TEdSX0NTVikpICAlPiVcbiAgLlssIC4oTEdSID0gbWF4KExHUikpLCBieSA9IC4oU0lURSwgQVJUKV1cblxuYGBgIn0= -->
+<pre class="r"><code># make Unique
+dtLGR_CSV &lt;- 
+   dtLGR[, .(LGR = max(LGR)), by = .(SITE, ART)]
+
+# union 
+dtLGR_CMB &lt;- 
+  rbindlist(
+    list( dtLGR_BP1, dtLGR_CSV))  %&gt;%
+  .[, .(LGR = max(LGR)), by = .(SITE, ART)]
+</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -222,6 +264,16 @@ $(document).ready(function () {
 <h1>Visualize</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuVmlldyhmVGFibGVPdmVydmlldyhkdExHUl9DTUIpJGR0UkFUSU8pXG5cbmZPcGVuX2luX0V4Y2VsKFxuICBwRFQgICA9IGR0TEdSX0NNQixcbiAgcFBhdGggPSBmaWxlLnBhdGgoXCJjOlwiLCBcImMtdGVtcFwiLCBcIkNMMVwiKSxcbiAgcEZOICAgPSBcIkxHUl9DTDAxLkNTVlwiIFxuKVxuXG5gYGAifQ== -->
+<pre class="r"><code>View(fTableOverview(dtLGR_CMB)$dtRATIO)
+
+fOpen_in_Excel(
+  pDT   = dtLGR_CMB,
+  pPath = file.path(&quot;c:&quot;, &quot;c-temp&quot;, &quot;CL1&quot;),
+  pFN   = &quot;LGR_CL01.CSV&quot; 
+)
+</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -236,12 +288,22 @@ $(document).ready(function () {
 <h1>Communicate</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuXG5wRkZOIDwtIG5vcm1hbGl6ZVBhdGgoZmlsZS5wYXRoKFwiflwiLCBcIlJXXCIsIFwiUUFSXCIsIFwiMzBfQW5hbHlzaXNcIiwgXCJGaWxlTmFtZS5jc3ZcIikpXG5cbndyaXRlLnRhYmxlKFxuICBwT0JKLFxuICBmaWxlID0gcEZGTiwgXG4gIHNlcCA9IFwiO1wiLCByb3cubmFtZXMgPSBGQUxTRSwgY29sLm5hbWVzID0gVFJVRSlcbnNoZWxsLmV4ZWMocEZGTilcbmBgYCJ9 -->
+<pre class="r"><code>
+pFFN &lt;- normalizePath(file.path(&quot;~&quot;, &quot;RW&quot;, &quot;QAR&quot;, &quot;30_Analysis&quot;, &quot;FileName.csv&quot;))
+
+write.table(
+  pOBJ,
+  file = pFFN, 
+  sep = &quot;;&quot;, row.names = FALSE, col.names = TRUE)
+shell.exec(pFFN)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZSAgIDogIlF1YWxpdHkgQXNzdXJhbmNlIFJlcG9ydCINCnN1YnRpdGxlOiAiSEFOQSBNZW1vcnkiDQphdXRob3IgIDogIkYuSi4gUGFkdCINCmRhdGUgICAgOiAiYHIgZm9ybWF0KFN5cy50aW1lKCksICclQiAlZCwgJVknKWAiDQpvdXRwdXQ6DQogIGh0bWxfbm90ZWJvb2s6DQogICAgdG9jOiB5ZXMNCiAgcGRmX2RvY3VtZW50Og0KICAgIGhpZ2hsaWdodDogdGFuZ28NCiAgICB0b2M6IHllcw0KICAgIHRvY19kZXB0aDogNA0KZWRpdG9yX29wdGlvbnM6IA0KICBjaHVua19vdXRwdXRfdHlwZTogaW5saW5lDQotLS0NCg0KW1I0RFNdKGh0dHA6Ly9yNGRzLmhhZC5jby5uei9pbnRyb2R1Y3Rpb24uaHRtbCkNCg0KIyBPYmplY3RpdmUNCg0KDQpgYGB7ciBzZXR1cH0NCiMgIyBDbGVhbnNlIG1lbW9yeQ0KIyBybShsaXN0ID0gbHMoKSkNCiMgZ2MoKQ0KDQojIHBhcmFtZXRlcnMgU2V0dGluZ3MNCnBYTFNYICAgIDwtICIiIA0KcFdTSFQgICAgPC0gVFJVRQ0KbmV3ZmlsZXMgPC0gVFJVRQ0KQklET0NzcmMgPC0gbm9ybWFsaXplUGF0aCgifi8uLi8uLi9HcmFuZFZpc2lvbi9TQVAgQkkgZG9jdW1lbnRhdGlvbiAtIERvY3VtZW50cy9iaS1kb2Mvc3JjLyIpDQoNCiMgS25pdFIgU2V0VXAgbG9jYXRpb24NCktTICAgPC0gZmlsZS5wYXRoKCJ+IiwgIlJXIiwNCiAgICAgICAgICAgICAgICAgICJRQVIiLCAiMDBfUlByb2oiLCAiMDBfR2xvYmFsIiwgIktuaXRSX1NldFVwLlIiKQ0KDQojIExvYWQgZnVuY3Rpb25zDQppbnZpc2libGUoc291cmNlKEtTKSkNCg0KIyBGVFAgLSBDb25uZWN0aW9uIHRvIEdWIEZpbGVTZXJ2ZXINCiMgQ29uc3RhbnRzDQojIGZvbGRlciAgPC0gIi9iaS9pYi9tZCIgICAgICAgICAgDQojIGxmb2xkZXIgPC0gZmlsZS5wYXRoKCIuLiIsIGZvbGRlcikgICMgbG9jYWwgZm9sZGVyDQojIGZzdXJsICAgPC0gcGFzdGUwKA0KIyAgICJmdHA6Ly9mcy5ncmFuZHZpc2lvbi5jb20vcHl0aGlhLyIsIGZvbGRlcikNCiMgdXNlcnB3ZCA8LSBwYXN0ZSgiZnRwYnAxIiwgcGFyYW1zJHBhc3N3b3JkLCBzZXAgPSAiOiIpDQoNCmBgYA0KDQojIERhdGEgSW1wb3J0DQoNCmBgYHtyIEltcG9ydH0NCnBUYWJsZSA8LSAiL0JJQy9BRzFNTlBEMDEwMCINCmR0UFNBIDwtDQogIGZSZWFkX2FuZF9VbmlvbigNCiAgICBwU0lEQ0xOVCA9ICJCUDEzMDAiLA0KICAgIHBUYWJsZSAgID0gcFRhYmxlLA0KICAgIHBPcHRpb25zID0gbGlzdCgpLA0KICAgIHBGaWVsZHMgID0gZkdldEZpZWxkcyhwU1lTVElEID0gIkJQMSIsIHBUYWJsZSA9IHBUYWJsZSwgcENMSUVOVCA9ICIzMDAiKSkNCg0KYGBgDQoNCg0KIyBUaWR5DQoNCmBgYHtyIFRpZHl9DQoNCg0KYGBgDQoNCiMgVHJhbnNmb3JtDQoNCmBgYHtyIFRyYW5zZm9ybX0NCiMgbWFrZSBVbmlxdWUNCmR0TEdSX0NTViA8LSANCiAgIGR0TEdSWywgLihMR1IgPSBtYXgoTEdSKSksIGJ5ID0gLihTSVRFLCBBUlQpXQ0KDQojIHVuaW9uIA0KZHRMR1JfQ01CIDwtIA0KICByYmluZGxpc3QoDQogICAgbGlzdCggZHRMR1JfQlAxLCBkdExHUl9DU1YpKSAgJT4lDQogIC5bLCAuKExHUiA9IG1heChMR1IpKSwgYnkgPSAuKFNJVEUsIEFSVCldDQoNCmBgYA0KDQojIFZpc3VhbGl6ZQ0KDQpgYGB7ciBWaXN1YWxpemV9DQpWaWV3KGZUYWJsZU92ZXJ2aWV3KGR0TEdSX0NNQikkZHRSQVRJTykNCg0KZk9wZW5faW5fRXhjZWwoDQogIHBEVCAgID0gZHRMR1JfQ01CLA0KICBwUGF0aCA9IGZpbGUucGF0aCgiYzoiLCAiYy10ZW1wIiwgIkNMMSIpLA0KICBwRk4gICA9ICJMR1JfQ0wwMS5DU1YiIA0KKQ0KDQpgYGANCg0KIyBNb2RlbA0KDQpgYGB7ciBNb2RlbH0NCg0KYGBgDQoNCiMgQ29tbXVuaWNhdGUNCg0KYGBge3IgQ29tbXVuaWNhdGV9DQoNCnBGRk4gPC0gbm9ybWFsaXplUGF0aChmaWxlLnBhdGgoIn4iLCAiUlciLCAiUUFSIiwgIjMwX0FuYWx5c2lzIiwgIkZpbGVOYW1lLmNzdiIpKQ0KDQp3cml0ZS50YWJsZSgNCiAgcE9CSiwNCiAgZmlsZSA9IHBGRk4sIA0KICBzZXAgPSAiOyIsIHJvdy5uYW1lcyA9IEZBTFNFLCBjb2wubmFtZXMgPSBUUlVFKQ0Kc2hlbGwuZXhlYyhwRkZOKQ0KYGBgDQoNCg0K</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZSAgIDogIlF1YWxpdHkgQXNzdXJhbmNlIFJlcG9ydCINCnN1YnRpdGxlOiAiSEFOQSBNZW1vcnkiDQphdXRob3IgIDogIkYuSi4gUGFkdCINCmRhdGUgICAgOiAiYHIgZm9ybWF0KFN5cy50aW1lKCksICclQiAlZCwgJVknKWAiDQpvdXRwdXQ6DQogIGh0bWxfbm90ZWJvb2s6DQogICAgdG9jOiB5ZXMNCiAgcGRmX2RvY3VtZW50Og0KICAgIGhpZ2hsaWdodDogdGFuZ28NCiAgICB0b2M6IHllcw0KICAgIHRvY19kZXB0aDogNA0KZWRpdG9yX29wdGlvbnM6IA0KICBjaHVua19vdXRwdXRfdHlwZTogaW5saW5lDQotLS0NCg0KW1I0RFNdKGh0dHA6Ly9yNGRzLmhhZC5jby5uei9pbnRyb2R1Y3Rpb24uaHRtbCkNCg0KIyBPYmplY3RpdmUNCg0KDQpgYGB7ciBzZXR1cH0NCiMgIyBDbGVhbnNlIG1lbW9yeQ0KIyBybShsaXN0ID0gbHMoKSkNCiMgZ2MoKQ0KDQojIHBhcmFtZXRlcnMgU2V0dGluZ3MNCnBYTFNYICAgIDwtICIiIA0KcFdTSFQgICAgPC0gVFJVRQ0KbmV3ZmlsZXMgPC0gVFJVRQ0KQklET0NzcmMgPC0gbm9ybWFsaXplUGF0aCgifi8uLi8uLi9HcmFuZFZpc2lvbi9TQVAgQkkgZG9jdW1lbnRhdGlvbiAtIERvY3VtZW50cy9iaS1kb2Mvc3JjLyIpDQoNCiMgS25pdFIgU2V0VXAgbG9jYXRpb24NCktTICAgPC0gZmlsZS5wYXRoKCJ+IiwgIlJXIiwNCiAgICAgICAgICAgICAgICAgICJRQVIiLCAiMDBfUlByb2oiLCAiMDBfR2xvYmFsIiwgIktuaXRSX1NldFVwLlIiKQ0KDQojIExvYWQgZnVuY3Rpb25zDQppbnZpc2libGUoc291cmNlKEtTKSkNCg0KIyBGVFAgLSBDb25uZWN0aW9uIHRvIEdWIEZpbGVTZXJ2ZXINCiMgQ29uc3RhbnRzDQojIGZvbGRlciAgPC0gIi9iaS9pYi9tZCIgICAgICAgICAgDQojIGxmb2xkZXIgPC0gZmlsZS5wYXRoKCIuLiIsIGZvbGRlcikgICMgbG9jYWwgZm9sZGVyDQojIGZzdXJsICAgPC0gcGFzdGUwKA0KIyAgICJmdHA6Ly9mcy5ncmFuZHZpc2lvbi5jb20vcHl0aGlhLyIsIGZvbGRlcikNCiMgdXNlcnB3ZCA8LSBwYXN0ZSgiZnRwYnAxIiwgcGFyYW1zJHBhc3N3b3JkLCBzZXAgPSAiOiIpDQoNCmBgYA0KDQojIERhdGEgSW1wb3J0DQoNCmBgYHtyIEltcG9ydH0NCnBUYWJsZSA8LSAiL0JJQy9BRzFNTlBEMDEwMCINCg0KZHRNRU0gPC0NCiAgZlJlYWRfYW5kX1VuaW9uKA0KICAgIHBTSURDTE5UID0gIkJQMTMwMCIsDQogICAgcFRhYmxlICAgPSBwVGFibGUpICU+JQ0KICBzZXRuYW1lcyhnc3ViKHBhdHRlcm4gPSAiL0JJQy8iLCByZXBsYWNlbWVudCA9ICIiLCB4ID0gbmFtZXMoLikpKQ0KDQpgYGANCg0KDQojIFRpZHkNCg0KYGBge3IgVGlkeX0NCg0KDQpgYGANCg0KIyBUcmFuc2Zvcm0NCg0KYGBge3IgVHJhbnNmb3JtfQ0KIyBtYWtlIFVuaXF1ZQ0KZHRMR1JfQ1NWIDwtIA0KICAgZHRMR1JbLCAuKExHUiA9IG1heChMR1IpKSwgYnkgPSAuKFNJVEUsIEFSVCldDQoNCiMgdW5pb24gDQpkdExHUl9DTUIgPC0gDQogIHJiaW5kbGlzdCgNCiAgICBsaXN0KCBkdExHUl9CUDEsIGR0TEdSX0NTVikpICAlPiUNCiAgLlssIC4oTEdSID0gbWF4KExHUikpLCBieSA9IC4oU0lURSwgQVJUKV0NCg0KYGBgDQoNCiMgVmlzdWFsaXplDQoNCmBgYHtyIFZpc3VhbGl6ZX0NClZpZXcoZlRhYmxlT3ZlcnZpZXcoZHRMR1JfQ01CKSRkdFJBVElPKQ0KDQpmT3Blbl9pbl9FeGNlbCgNCiAgcERUICAgPSBkdExHUl9DTUIsDQogIHBQYXRoID0gZmlsZS5wYXRoKCJjOiIsICJjLXRlbXAiLCAiQ0wxIiksDQogIHBGTiAgID0gIkxHUl9DTDAxLkNTViIgDQopDQoNCmBgYA0KDQojIE1vZGVsDQoNCmBgYHtyIE1vZGVsfQ0KDQpgYGANCg0KIyBDb21tdW5pY2F0ZQ0KDQpgYGB7ciBDb21tdW5pY2F0ZX0NCg0KcEZGTiA8LSBub3JtYWxpemVQYXRoKGZpbGUucGF0aCgifiIsICJSVyIsICJRQVIiLCAiMzBfQW5hbHlzaXMiLCAiRmlsZU5hbWUuY3N2IikpDQoNCndyaXRlLnRhYmxlKA0KICBwT0JKLA0KICBmaWxlID0gcEZGTiwgDQogIHNlcCA9ICI7Iiwgcm93Lm5hbWVzID0gRkFMU0UsIGNvbC5uYW1lcyA9IFRSVUUpDQpzaGVsbC5leGVjKHBGRk4pDQpgYGANCg0KDQo=</div>
 
 
 
