@@ -71,15 +71,7 @@ dtMEM <-
 # Transform
 
 ```{r Transform}
-# make Unique
-dtLGR_CSV <- 
-   dtLGR[, .(LGR = max(LGR)), by = .(SITE, ART)]
 
-# union 
-dtLGR_CMB <- 
-  rbindlist(
-    list( dtLGR_BP1, dtLGR_CSV))  %>%
-  .[, .(LGR = max(LGR)), by = .(SITE, ART)]
 
 ```
 
@@ -89,9 +81,9 @@ dtLGR_CMB <-
 View(fTableOverview(dtLGR_CMB)$dtRATIO)
 
 fOpen_in_Excel(
-  pDT   = dtLGR_CMB,
-  pPath = file.path("c:", "c-temp", "CL1"),
-  pFN   = "LGR_CL01.CSV" 
+  pDT   = dtMEM,
+  pPath = file.path("c:", "c-temp"),
+  pFN   = "HMEM.CSV" 
 )
 
 ```
