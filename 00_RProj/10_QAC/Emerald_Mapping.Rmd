@@ -27,12 +27,12 @@ knitr::opts_chunk$set(include = FALSE)
 library(readxl)
 
 # parameters Settings
-pXLSX    <- "QAR-Emerald" 
+pXLSX    <- "RyK-CR070" 
 pWSHT    <- TRUE
 newfiles <- TRUE
 
 # KnitR SetUp location
-KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+KS   <- file.path("..", "..", "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
 
 # Load functions
 invisible(source(KS))
@@ -40,21 +40,21 @@ invisible(source(KS))
 
 ```{r IMPORT}
 
+dtZFIAR_ADM <- 
+  fRead_and_Union(
+    pSIDCLNT = c("RP1300", "RU1300"), 
+    pTable   = "ZFIAR_ADM", 
+    pOptions = list(), 
+    pFields  = list())
+
+# Complex Mapping 0 Records
 dtZFIAR_ACM <- 
   fReadSAPTable(
-  pSystID = "RU1", 
-  pClient = "300",
-  pTable = "ZFIAR_ACM",
-  pOptions = list(),
-  pFields = fGetFields(pSYSTID = "RU1", pCLIENT = "300", pTable = "ZFIAR_ACM"))
-
-dtZFIAR_ADM <- 
-  fReadSAPTable(
-  pSystID = "RU1", 
-  pClient = "300",
-  pTable = "ZFIAR_ADM",
-  pOptions = list(),
-  pFields = fGetFields(pSYSTID = "RU1", pCLIENT = "300", pTable = "ZFIAR_ADM"))
+    pSystID  = "RU1", 
+    pClient  = "300",
+    pTable   = "ZFIAR_ACM",
+    pOptions = list(),
+    pFields  = list())
 
 dtZFIAR_CC <- 
   fReadSAPTable(
@@ -64,7 +64,77 @@ dtZFIAR_CC <-
   pOptions = list(),
   pFields = fGetFields(pSYSTID = "RU1", pCLIENT = "300", pTable = "ZFIAR_CC"))
 
+dtGL_ACCOUNT <- 
+  fReadSAPTable(
+  pSystID = "BU1", 
+  pClient = "300",
+  pTable = "/BI0/PGL_ACCOUNT",
+  pOptions = list("CHRT_ACCTs = 'GV00'"),
+  pFields = fGetFields(pSYSTID = "BU1", pCLIENT = "300", pTable = "/BI0/PGL_ACCOUNT"))
+
+dtFSV_BI <- 
+  fReadSAPTable(
+    pSystID = "BU1", 
+    pClient = "300",
+    pTable = "/BI0/HGL_ACCOUNT",
+    pOptions = list(),
+    pFields = list("NODENAME"))
+
+
 
 ```
 
+```{r Transform}
+dtZFIAR_ADM[, MANDT := NULL]
 
+flds <- 
+  c("EMERALD_POSITIVE", "EMERALD_NEGATIVE", "EMERALD_PRODUCT_GROUP", "MAPPING_FLAG" ,  "EMERALD_S_ACCOUNT", "EMERALD_MA_ACCOUNT", "INTERCOMPANY_PARTNER_REQ" )
+
+dtMAP_ADM_GL <-  copy(dtGL_ACCOUNT)
+setnames(
+  dtMAP_ADM_GL,
+  c("/BIC/G1CACCNT",  "/BIC/G1DACCNT", "/BIC/G1PRDCOD", "/BIC/G1MAPFLG", 
+    "/BIC/G1SACCNT", "/BIC/G1MACCNT" , "/BIC/G1INTCREQ"),   
+  flds)
+
+dtMAP_ADM_GL <- 
+  dtMAP_ADM_GL[, names(dtZFIAR_ADM), with = FALSE] %T>%
+  setcolorder(names(dtZFIAR_ADM)) 
+
+dtCOMP <- 
+  rbindlist(
+    list(dtMAP_ADM_GL, dtZFIAR_ADM))   %T>%
+  setkey("GL_ACCOUNT")                 %>%
+  .[, DUP := duplicated(., by = flds)] %>%
+  .[, DPA := any(DUP)    , by = flds]
+
+compflds <- setdiff(names(dtZFIAR_ADM), c("SYSTID", "CLIENT", "MANDT"))
+dtZFIAR_ADM_COMPARE <- 
+  copy(dtZFIAR_ADM)                        %T>%
+  setkey("GL_ACCOUNT")                     %>%
+  .[, DUP := duplicated(., by = compflds)] %>%
+  .[, DPA := any(DUP)    , by = compflds] 
+
+  
+```
+
+
+```{r Visualize}
+View(dtCOMP[DPA == FALSE])
+View(dtZFIAR_ADM_COMPARE[DPA == FALSE])
+
+write.table(
+  x    = dtCOMP[DPA == FALSE], 
+  file = file.path("..", "60_Results", "ADM_Compare.csv"),
+  sep  = ";", row.names = FALSE, col.names = TRUE)
+# shell.exec(file.path("..", "60_Results", "ADM_Compare.csv"))
+
+write.table(
+  x    = dtZFIAR_ADM_COMPARE[DPA == FALSE], 
+  file = file.path("..", "60_Results", "dtZFIAR_ADM_COMPARE.csv"),
+  sep  = ";", row.names = FALSE, col.names = TRUE)
+
+shell.exec( file.path("C:/Users/fpadt/OneDrive - GrandVision/Documents/RW/GV_ryk", 
+                      "60_Results", "dtZFIAR_ADM_COMPARE.csv"))
+
+```

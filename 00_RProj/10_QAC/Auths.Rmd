@@ -1,12 +1,17 @@
 ---
 title   : "Quality Assurance Report"
-subtitle: "Authorization"
+subtitle: "Users & Authorization"
 author  : "F.J. Padt"
-date: "January 30, 2018"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
 output:
+  html_notebook:
+    toc: yes
   pdf_document:
-    toc: no
+    highlight: tango
+    toc: yes
     toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup}
@@ -21,43 +26,49 @@ pWSHT    <- TRUE
 newfiles <- TRUE
 
 # KnitR SetUp location
-KS   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW",
+KS   <- file.path("~", "RW",
                   "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
 
 # Load functions
 invisible(source(KS))
 
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
 ```
 
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
 # Read Tables
-```{r ReadAuthTables}
+```{r Import}
 
 T1 <- Sys.time()
 
 dtUSGRP <- 
   fRead_and_Union(
-    pType   = "B", 
-    pTable  = "USGRP",
-    pOptions = list(),
-    pFields = fGetFields(pTable = "USGRP"))
+    pType    = "B", 
+    pTable   = "USGRP",
+    pOptions = list())
 
 dtUSGRPT <- 
   fRead_and_Union(
-    pType   = "B", 
+    pType    = "B", 
     pTable   = "USGRPT", 
-    pOptions = list("SPRSL = 'E'"),
-    pFields  = fGetFields(pTable = "USGRPT"))
+    pOptions = list("SPRSL = 'E'"))
 
 dtUSGRP_USER <-
   fRead_and_Union(
-    pType   = "B", 
+    pType    = "B", 
     pTable   = "USGRP_USER", 
-    pOptions = list(),
-    pFields  = fGetFields(pTable = "USGRP_USER"))
+    pOptions = list())
 
 dtUSR02 <- 
   fRead_and_Union(
-    pType   = "B", 
+    pType    = "B", 
     pTable   = "USR02", 
     pOptions = list(),
     pFields  = list(
@@ -68,30 +79,28 @@ dtUSR02 <-
 
 dtAGR_USERS <- 
   fRead_and_Union(
-    pType   = "B", 
+    pType    = "B", 
     pTable   = "AGR_USERS", 
-    pOptions = list(),
-    pFields  = fGetFields(pTable = "AGR_USERS"))
+    pOptions = list())
 
 dtUSR21 <- 
   fRead_and_Union(
-    pType   = "B", 
+    pType    = "B", 
     pTable   = "USR21", 
-    pOptions = list(),
-    pFields  = fGetFields(pTable = "USR21"))
+    pOptions = list())
 
 dtADR6 <- 
   fRead_and_Union(
-    pType   = "B", 
+    pType    = "B", 
     pTable   = "ADR6", 
-    pOptions = list(),
-    pFields  = fGetFields(pTable = "ADR6"))
+    pOptions = list())
+
 # AGR_DEFINE
 
 # 
 dtAUTH       <-
   fRead_and_Union(
-    pSIDCLNT = c("BU1300", "BA1300"),
+    pSIDCLNT = c("BU1300", "BA1300", "BP1300"),
     pTable   = "/BIC/AG1AAPD222",
     pOptions = list(),
     pFields  = list(
@@ -105,28 +114,59 @@ dtAUTH       <-
       'RECORDMODE'
     ))
 
-dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
-
-write.table(
-  dtRES, file = "c:/c-temp/RES.csv",
-  sep = ";", row.names = FALSE, col.names = TRUE)
-
-write.table(
-  dtAUTH, file = "c:/c-temp/auth.csv",
-  sep = ";", row.names = FALSE, col.names = TRUE)
+```
 
 
+```{r Tidy}
 
-shell.exec(file.path("c:/c-temp/RES.csv"))
- 
-# Error in `[[<-.data.frame`(`*tmp*`, f, value = character(0)) : 
-#   replacement has 0 rows, data has 995
+```
+```{r Transform}
 
+```
+
+```{r Visualize}
+
+```
+
+```{r Model}
 
 ```
 
 
-```   
+```{r Communicate}
+
+dtUSER_PVT <- 
+  dcast.data.table(
+    data = dtUSR02,
+    formula = BNAME 
+    + USTYP + CLASS + TRDAT + GLTGB  + UFLAG
+    ~ SYSTID,
+    fun.aggregate = length,
+    value.var = "SYSTID")                    %>%  
+  .[, Total := BS1 + BD1 + BU1 + BA1 + BP1]        %T>%
+  setcolorder(
+    c("BNAME", "USTYP", "CLASS", "TRDAT", "GLTGB", "UFLAG",
+      "BS1", "BD1", "BU1", "BA1", "BP1", "Total"))
+
+pFFN <- file.path("~", "RW", "QAR", "30_Analysis", "dtUSER_PVT.csv")
+
+write.table(
+  dtUSER_PVT,
+  file = pFFN, sep = ";", row.names = FALSE)
+shell.exec(normalizePath(pFFN))
+
+dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+
+pFFN <- file.path("~", "RW", "QAR", "30_Analysis", "RES.csv")
+
+write.table(
+  dtRES,
+  file = pFFN, sep = ";", row.names = FALSE)
+shell.exec(normalizePath(pFFN))
+
+```
+
+
   # read data from MS Access extract
 
 
@@ -164,11 +204,14 @@ dtAUTH <-
   dtUSR_AGR[dtUSR, on = .(SYSTID, MANDT, UNAME = BNAME)]      %>%
   dtUSR_GRP[., on = .(SYSTID, MANDT, BNAME = UNAME), allow.cartesian = TRUE]
 
-write.table(
-  dtAUTH, file = "c:/c-temp/auth2.csv",
-  sep = ";", row.names = FALSE, col.names = TRUE)
+pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "auths.csv"))
 
-shell.exec(file.path("c:/c-temp/auth2.csv"))
+write.table(
+  dtAUTH,
+  file = pFFN, sep = ";", row.names = FALSE)
+shell.exec(pFFN)
+
+
 
 ```
 

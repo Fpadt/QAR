@@ -269,15 +269,23 @@ dtT <- dtRSPCLOG[CHAIN_ID == "G1_PC_TR_FI_FIGL" &
 
  dtRSPCCHAIN     <- 
   fRead_and_Union(
-    pType    = "B",
+    pSIDCLNT = c("BD1100"),
     pTable   = "RSPCCHAIN",
     pOptions = list("OBJVERS = 'A'"))
 
 dtRSPCCHAINT    <- 
   fRead_and_Union(
+    # pSIDCLNT = c("BD1100"),    
     pType    = "B",
     pTable   = "RSPCCHAINT",
     pOptions = list("OBJVERS = 'A'", "AND", "LANGU = 'E'"))
+
+# dtRSPCCHAINT    <- 
+#   fReadSAPTable(
+#     pSystID = "BD1",
+#     pClient = "100",
+#     pTable   = "RSPCCHAINT",
+#     pOptions = list("OBJVERS = 'A'", "AND", "LANGU = 'E'"))
 
 dtRSPCCHAINATTR <- 
   fRead_and_Union(
@@ -290,6 +298,19 @@ dtRSPCTRIGGER   <-
     pType    = "B",
     pTable   = "RSPCTRIGGER",
     pOptions = list("OBJVERS = 'A'"))
+
+dtRSPCTRIGGER_CHK <- 
+  dcast.data.table(
+    data = dtRSPCTRIGGER[PERIODIC == "X"],
+    formula = VARIANTE + 
+      PRDMINS + PRDHOURS + PRDDAYS + PRDWEEKS + PRDMONTHS ~ SYSTID,
+    fun.aggregate = length,
+    value.var = "SYSTID")                    %>%  
+  .[, Total := BD1 + BA1 + BU1 + BP1]        %T>%
+  setcolorder(
+    c("VARIANTE", "PRDMINS", "PRDHOURS", "PRDDAYS", "PRDWEEKS", "PRDMONTHS",
+      "BD1", "BA1", "BU1", "BP1", "Total"))  %T>%
+  View()
 
 dtBP1 <- 
   copy(dtSCHED)                             %>%
@@ -316,6 +337,13 @@ dtRSPCALIGN <-
 write.table(dtRSPCALIGN, 
             file = file.path(RES, "dtRSPCALIGN.csv"), row.names = F, col.names = T, sep = ";")
 shell.exec(file.path(RES))
+
+pFFN <- file.path("~", "RW", "QAR", "30_Analysis", "RSPCT.csv")
+
+write.table(
+  dtRSPCCHAINT,
+  file = pFFN, sep = ";", row.names = FALSE)
+shell.exec(normalizePath(pFFN))
 ```
 
 # Ecc Parameter Table
