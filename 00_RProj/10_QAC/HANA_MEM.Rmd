@@ -72,13 +72,12 @@ dtMEM <-
 
 ```{r Transform}
 
-
+dtMEM[, TIME := str_pad(string = TIME, width = 6, pad = "0", side = "left")]
 ```
 
 # Visualize
 
 ```{r Visualize}
-View(fTableOverview(dtLGR_CMB)$dtRATIO)
 
 fOpen_in_Excel(
   pDT   = dtMEM,
