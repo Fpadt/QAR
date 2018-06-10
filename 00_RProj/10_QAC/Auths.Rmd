@@ -114,19 +114,28 @@ dtAUTH       <-
       'RECORDMODE'
     ))
 
-```
+dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
 
+write.table(
+  dtRES, file = "c:/c-temp/RES.csv",
+  sep = ";", row.names = FALSE, col.names = TRUE)
+
+dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+write.table(
+  dtRES, file = "c:/c-temp/RES.csv",
+  sep = ";", row.names = FALSE, col.names = TRUE)
+```
 
 ```{r Tidy}
 
-```
-```{r Transform}
+
 
 ```
 
 ```{r Visualize}
 
 ```
+
 
 ```{r Model}
 
@@ -210,7 +219,6 @@ write.table(
   dtAUTH,
   file = pFFN, sep = ";", row.names = FALSE)
 shell.exec(pFFN)
-
 
 
 ```
