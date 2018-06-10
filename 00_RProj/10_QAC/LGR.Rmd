@@ -1,0 +1,134 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Last Goods Receipt"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+# Objective
+
+
+```{r setup}
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS   <- file.path("~", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+
+dtLGR <- fread(
+  file.path("C:", "c-temp", "CL1", "Stock history 20180528.csv"), 
+  colClasses = "character") %T>%
+  setnames(c("SITE", "ART", "LGR"))
+
+# All missing will be put on 20150101 as default
+dtLGR_BP1 <- fread(
+  file.path("C:", "c-temp", "CL1", "BP1_LGR.csv"), colClasses = "character") %>%
+  .[, LGR := gsub(pattern = "\\.", replacement = "", x = LGR)]               %T>%
+  .[, `:=`(SITE = "G060", DAYS = NULL, PC = NULL)]                           %T>%
+  setcolorder(c("SITE", "ART", "LGR"))                                       %>%
+  .[LGR == "#", LGR := "20150101"]
+
+```
+
+```{r readPSA}
+pTable <- "/BIC/B0001257001"
+dtPSA <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = pTable,
+    pOptions = list(),
+    pFields  = fGetFields(pSYSTID = "BP1", pTable = pTable, pCLIENT = "300"))
+```
+
+
+# Tidy
+
+```{r Tidy}
+
+
+```
+
+# Transform
+
+```{r Transform}
+# make Unique
+dtLGR_CSV <- 
+   dtLGR[, .(LGR = max(LGR)), by = .(SITE, ART)]
+
+# union 
+dtLGR_CMB <- 
+  rbindlist(
+    list( dtLGR_BP1, dtLGR_CSV))  %>%
+  .[, .(LGR = max(LGR)), by = .(SITE, ART)]
+
+```
+
+# Visualize
+
+```{r Visualize}
+View(fTableOverview(dtLGR_CMB)$dtRATIO)
+
+fOpen_in_Excel(
+  pDT   = dtLGR_CMB,
+  pPath = file.path("c:", "c-temp", "CL1"),
+  pFN   = "LGR_CL01.CSV" 
+)
+
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+
+pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "FileName.csv"))
+
+write.table(
+  pOBJ,
+  file = pFFN, 
+  sep = ";", row.names = FALSE, col.names = TRUE)
+shell.exec(pFFN)
+```
+
+

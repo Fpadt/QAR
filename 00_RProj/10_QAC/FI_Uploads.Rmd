@@ -1,0 +1,62 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Process Chains "
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "RSPC-Schedule" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+```{r Import}
+
+dtCSKS <- 
+  fRead_and_Union(
+    pSIDCLNT = c("RP1300", "RD1100"), 
+    pTable   = "CSKS", 
+    pOptions = list(),
+    pFields  = list("MANDT", "KOKRS", "KOSTL", "DATBI", "DATAB",
+                    "BKZKP", "PKZKP", "BUKRS", "KOSAR",
+                    "VERAK", "WAERS", "PRCTR", "WERKS") )
+
+```
+
+```{r Transform}
+dtCSKS_T <- 
+  copy(dtCSKS)                      %>%
+  .[, CCTRisPCTR := (KOSTL == PRCTR)] %>%
+  .[KOKRS == "GV02"]
+
+pZQRY <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "csks.csv"))
+write.table(
+  dtCSKS,
+  file = pZQRY, sep = ";", row.names = FALSE)
+shell.exec(pZQRY)
+```
+

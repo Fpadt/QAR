@@ -1,0 +1,65 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Z-Queries"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "Z-Queries" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS   <- file.path("..", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+```{r Import}
+dtRSZCOMPDIR <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "RSZCOMPDIR", 
+    pOptions = list("OBJVERS = 'A'"))
+
+dtRSRREPDIR <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "RSRREPDIR", 
+    pOptions = list("OBJVERS = 'A'"))
+```
+
+```{r TransForm}
+dtRSZCOMPDIR_T <- 
+  copy(dtRSZCOMPDIR) %>%
+  .[, TYPE := substr(COMPID,1,1)] %>%
+  .[TYPE == "Z"]                  %>%
+  dtRSRREPDIR[., on = .(SYSTID, CLIENT, COMPUID), nomatch = 0]
+
+pZQRY <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "zQRY.csv"))
+write.table(
+  dtRSZCOMPDIR_T, 
+  file = pZQRY, sep = ";", row.names = FALSE)
+shell.exec(pZQRY)
+```
+
+
