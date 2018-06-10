@@ -17,6 +17,8 @@
 # Floris Padt
 # 2018 Jan 28
 
+# https://blogs.sap.com/2012/06/13/analytics-with-sap-and-r/
+
 # RSDPL_CUBE_DATA_READ
 # RSDPL_CHA_MASTER_DATA_READ	DM API: Reading master data of a characteristic
 # RSDPL_CHA_TEXT_DATA_READ	DM API: Reading text data of a characteristic
@@ -405,5 +407,16 @@ fChar2Num <- function(x){
            perl        = TRUE))
   
   return(as.numeric(y))
+  
+}
+
+
+fChangePassWord <- 
+  function(pSYSTID, pCLIENT, pNEWWPASS) {
+    
+  load(file = file.path(SAP, "SAP_LOGON.RData"))
+  dtSAP_LOGON[systid == pSYSTID, passwd := pNEWWPASS]
+  save(dtSAP_LOGON, file = file.path(SAP, "SAP_LOGON.RData"))
+  load(file = file.path(SAP, "SAP_LOGON.RData"))
   
 }
