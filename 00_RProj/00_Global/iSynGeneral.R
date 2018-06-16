@@ -687,7 +687,12 @@ fAlignDS <- function(pDT, pDS, pSystID = "BP1", pClient = "300"){
 }
 
 fOpen_in_Excel <- 
-  function(pDT, pPath = getwd(), pFN){
+  function(pDT, pPath = "./Results", pFN){
+    
+    if (!dir.exists(pPath)) {
+      dir.create(pPath)
+    }
+    
     pFFN <- file.path(pPath, pFN)
     write.table(
       x = pDT,

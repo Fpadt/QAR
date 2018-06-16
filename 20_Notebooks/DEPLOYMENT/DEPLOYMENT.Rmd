@@ -1,0 +1,135 @@
+---
+title   : "Apprval of Deployemnt"
+subtitle: "CD and Transport Check"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+# Objective
+
+
+```{r setup}
+# Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS   <- file.path("~", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+pCD        <- "2200003708"
+pTP <-
+  paste("TRKORR = 'BD1K917092'", "OR",
+        "TRKORR = 'BD1K917151'", sep = ' ')
+pTP <- "TRKORR = 'BD1K916734'"
+
+dtE070 <-
+  fRead_and_Union(
+    pSIDCLNT = "BD1100",
+    pTable   = "E070",
+    pOptions = list(pTP))
+
+dtE071 <-
+  fRead_and_Union(
+    pSIDCLNT = "BD1100",
+    pTable   = "E071",
+    pOptions = list(pTP))
+
+dtRSZCOMPDIR <-
+  fRead_and_Union(
+    pSIDCLNT = c("BD1100", "BU1300", "BP1300"),
+    pTable   = "RSZCOMPDIR",
+    pOptions = list("OBJVERS = 'A'"))
+
+dtRSRREPDIR <-
+  fRead_and_Union(
+    pSIDCLNT = c("BD1100", "BU1300", "BP1300"),
+    pTable   = "RSRREPDIR",
+    pOptions = list("OBJVERS = 'A'"))
+```
+
+# Tidy
+```{r Tidy}
+
+```
+
+# Transform
+
+```{r Transform}
+dtQRY <- 
+  dtE071[OBJECT == "ELEM"][dtRSZCOMPDIR, 
+               on = .(OBJ_NAME = COMPUID ),
+               nomatch = 0] %T>%
+  print(dtQRY)
+
+dtQRYDOC <- 
+  dtRSRREPDIR[COMPTYPE == "REP"][
+    dtRSZCOMPDIR[], on = .(COMPUID), nomatch = 0]
+```
+
+# Visualize
+
+```{r Visualize}
+
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+
+pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", paste0(pCD, ".csv")))
+
+write.table(
+  dtQRY,
+  file = pFFN, 
+  sep = ";", row.names = FALSE, col.names = TRUE)
+shell.exec(pFFN)
+
+fOpen_in_Excel(
+  pDT   = dtQRYDOC,
+  pPath = normalizePath(file.path("~", "RW", "QAR", "30_Analysis")),
+  pFN   =  paste0("QRY_DOC", ".csv")
+  
+)
+```
+
+

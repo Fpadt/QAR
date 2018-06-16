@@ -43,8 +43,9 @@ FIG  <- file.path(PRJ , "70_Figures")
 #source('../pythia/SharedFunctions/GenericFunctions.R')
 invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
 
-dtCR <- fread(file.path(RAW, "cr.csv")) 
-dtCD <- fread(file.path(RAW, "cd.csv"))
+pDAY <- today()
+dtCR <- fread(file.path(RAW, paste0("CR_W", isoweek(pDAY), ".csv"))) 
+dtCD <- fread(file.path(RAW, paste0("CD_W", isoweek(pDAY), ".csv"))) 
 
 dtCR_HDR <- fread(file.path(DAT, "CR_HDR.csv"))
 dtCD_HDR <- fread(file.path(DAT, "CD_HDR.csv"))

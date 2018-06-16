@@ -1,0 +1,161 @@
+---
+title   : "Apollo Training"
+subtitle: "Train-the-trainer"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+# Objective
+
+
+```{r setup}
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS   <- file.path("~", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+
+dtUSR02 <-
+  fRead_and_Union(
+    pSIDCLNT = c("BA1300", "BP1300"),
+    pTable   = "USR02",
+    pOptions = list("CLASS like 'DE%'", "AND", 
+                    "USTYP = 'A'"     , "AND",
+                    "GLTGB > '20180101'"),
+    pFields  = list("BNAME", "TRDAT", "CLASS", "USTYP", "UFLAG", "GLTGB"))
+
+dtUSR21 <-
+  fRead_and_Union(
+    pSIDCLNT = c("BA1300", "BP1300"),
+    pTable   = "USR21",
+    pOptions = list())
+
+dtADR6 <-
+  fRead_and_Union(
+    pSIDCLNT = c("BA1300", "BP1300"),
+    pTable   = "ADR6",
+    pOptions = list())
+
+dtADRP <-
+  fRead_and_Union(
+    pSIDCLNT = c("BA1300", "BP1300"),
+    pTable   = "ADRP",
+    pOptions = list("DATE_TO > '20180101'"),
+    pFields  = list("PERSNUMBER", "NAME_FIRST", "NAME_LAST", "NAME_TEXT"))
+
+dtKEY <- 
+  fread("APOLLO_KEY_USERS.csv")
+```
+
+# Tidy
+
+```{r Tidy}
+```
+
+
+# Transform
+
+```{r Transform}
+
+conv2date <- 
+  function(pSAP_DATE) {
+    make_date(
+      year  = substr(pSAP_DATE, 1, 4), 
+      month = substr(pSAP_DATE, 5, 6), 
+      day   = substr(pSAP_DATE, 7, 8))}
+
+# DT <- copy(dtUSR02)
+# 
+# for (j in c("TRDAT", "GLTGB")) {
+#   set(DT, j = j, value = conv2date(DT[[j]]))}
+
+sq_col_idx <- c("TRDAT", "GLTGB")
+dtUSR_2 <- 
+  dtUSR02[, (sq_col_idx) := map(.SD, conv2date),
+   .SDcols = sq_col_idx] %>%
+  .[, LDAYS := today() - TRDAT ]
+
+
+dtUSR <- 
+  dtADRP[dtUSR21, 
+         on = .(SYSTID, CLIENT, PERSNUMBER)]               %>%
+  .[dtADR6, 
+    on = .(SYSTID, MANDT = CLIENT, PERSNUMBER, ADDRNUMBER),
+    nomatch = 0]                                           %>%
+  .[, .(SYSTID, CLIENT, BNAME, SMTP_ADDR, 
+        NAME_FIRST, NAME_LAST, NAME_TEXT)]                 %>%
+  .[dtUSR_2, on = .(SYSTID, CLIENT, BNAME), 
+    nomatch = NA]                                          %>%
+  .[, USTATE := ifelse(GLTGB >= today(),
+    "VALID", "INVALID") ]                                  %>%
+  .[, USTATE := ifelse(
+    USTATE == "VALID" & UFLAG == "0",
+    "VALID", "LOCKED") ]                                   %>%
+  .[, `:=`(CLIENT = NULL, USTYP = NULL)]                   %>%
+  dtKEY[., on = .(BNAME), nomatch = NA]                    %T>%
+  setkey(BNAME)
+
+```
+
+# Visualize
+
+```{r Visualize}
+fOpen_in_Excel(dtUSR, pFN = "APOLLO_USER.csv")
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+
+pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "FileName.csv"))
+
+write.table(
+  pOBJ,
+  file = pFFN, 
+  sep = ";", row.names = FALSE, col.names = TRUE)
+shell.exec(pFFN)
+```
+
+

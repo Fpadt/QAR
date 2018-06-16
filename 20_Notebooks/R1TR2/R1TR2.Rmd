@@ -1,125 +1,106 @@
 ---
-title   : "Quality Assurance Report"
-subtitle: "R1 -> R2 Migration"
+title   : "R1 to R2"
+subtitle: "Query Documention"
 author  : "F.J. Padt"
 date    : "`r format(Sys.time(), '%B %d, %Y')`"
 output:
+  html_notebook:
+    toc: yes
   pdf_document:
-    toc: no
+    highlight: tango
+    toc: yes
     toc_depth: 4
-classoption: landscape
+editor_options: 
+  chunk_output_type: inline
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  echo    = FALSE,
-  eval    = TRUE,
-  message = FALSE,
-  warning = FALSE,
-  image   = TRUE,
-  results = "hide")
+[R4DS](http://r4ds.had.co.nz/introduction.html)
 
-# Cleanse memory
-rm(list = ls())
-gc()
+# Objective
 
-# folder locations
-RW   <- file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW")
-PRJ  <- file.path(RW  , "QAR")
-MOD  <- file.path(PRJ , "00_RProj")
-DAT  <- file.path(PRJ , "11_PrepData")
-RES  <- file.path(PRJ , "60_Results")
-FIG  <- file.path(PRJ , "70_Figures")
-MIG  <- file.path("C:", "Users", "fpadt", "GrandVision", "iSynergy - 90 BI",
-                  "iSynergy - 70. Migration") 
 
-#source('../pythia/SharedFunctions/GenericFunctions.R')
-invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
+```{r setup}
+# # Cleanse memory
+# rm(list = ls())
+# gc()
 
-# SAP systems to use
-pECC_SYST <- "RP1"
-pECC_CLNT <- "300"
-pBI_SYST  <- "BP1"
-pBI_CLNT  <- "300"
-pLGCINDC  <- "C"
-
-# Data Settings
-pXLSX    <- "R12R2" 
-
-pINFO    <- file.path(MIG, "INFO_MD.xlsx") 
-# note VPN is needed for this doesn't work on internal network
-# pINFO    <- "//grandvision.sharepoint.com/sites/NL1-Proj-iSynergy/05_CoE/90%20BI/INFOtst.xlsx"
+# parameters Settings
+pXLSX    <- "" 
 pWSHT    <- TRUE
 newfiles <- TRUE
-SID.lng  <- c("BD1100", "BA1300", "BP1300") #, "BTP300", "BU1300")
-SID.sht  <- substr(SID.lng, 1, 3)
+BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
 
-dtPATH <- 
-  data.table(
-    DESCR = c("RW", "PRJ", "MOD", "FIG", "DAT", "RES"),
-    PATH  = c( RW ,  PRJ ,  MOD ,  FIG ,  DAT ,  RES )
-  )
+# KnitR SetUp location
+KS   <- file.path("~", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
 
-# Open Excel for storing results
-if (file.exists(paste0(RES, "/", pXLSX, ".xlsx")) == TRUE) {
-  invisible(file.remove(paste0(RES, "/", pXLSX, ".xlsx")))
-}
+# Load functions
+invisible(source(KS))
 
-if (pWSHT == TRUE) {
-  fWriteToSheet(
-    dtPATH, 
-    RES, pXLSX, "PATHS", pAppend = FALSE )}
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
 
-gvLOGO_PATH <- file.path(FIG, "GV_LOGO.png") 
-if (!file.exists(gvLOGO_PATH)) {
-  download.file(
-    url      = "http://www.grandvision.com/img/logoGV.png",
-    destfile = gvLOGO_PATH,
-    mode     = 'wb')
-}
-knitr::include_graphics(gvLOGO_PATH)
+```
 
-# First execute the analysis zsANALYSIS-R1R2_MIG
-# Extecute mcrAnalysesExtract
-# C:\Users\fpadt\SAPEXPORT
+# Data Import
 
+```{r Import}
+MIG  <- file.path("C:", "Users", "fpadt", "GrandVision", "iSynergy - 90 BI",
+                  "70. Migration") 
+pINFO    <- file.path(MIG, "INFO_MD.xlsx") 
 
-read_and_union <- function(pTableName){
-  
-  dtReturn <- 
-    do.call(
-      rbind,
-      lapply(as.list(SID.lng), function(x) {
-        fGetEXPTable(
-          pTableName = pTableName,
-          pSystID = substr(x, 1, 3),
-          pClient = substr(x, 4, 6) )
-      }))
-  
-  return(dtReturn)
-}
-
-# read data from MS Access extract
 dtRSRREPDIR <-
   fRead_and_Union(
     pType    = "B",
     pTable   = "RSRREPDIR",
-    pOptions = list("OBJVERS = 'A'"))
+    pOptions = list("OBJVERS = 'A'"),
+    pFields  = list("COMPUID" , "INFOCUBE", "COMPTYPE", "COMPID" , "RFCSUPPORT", "OBJSTAT",
+                    "READMODE", "REPTIME" , "LASTUSER", "MODTIME", "GEN1TIME"  , "IS_PLANQUERY"))
 
 dtRSZCOMPDIR <-
   fRead_and_Union(
     pType    = "B",
     pTable   = "RSZCOMPDIR",
-    pOptions = list("OBJVERS = 'A'"))
+    pOptions = list("OBJVERS = 'A'"),
+    pFields = list("COMPUID", "COMPID"  , "OWNER", 
+                   "ACTIVFL", "TIMESTMP", "LASTUSED", "CREATED"))
 
+dtTADIR <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "TADIR",
+    pOptions = list("SRCSYSTEM like 'B%'"))
 
-dtRSZCOMPDIR <- read_and_union("RSZCOMPDIR")
-dtTADIR      <- read_and_union("TADIR")
-dtUSR02      <- fGetEXPTable(pTableName = "USR02", pSystID = "BP1", pClient = 300)
-dtUSR21      <- fGetEXPTable(pTableName = "USR21", pSystID = "BP1", pClient = 300)  
-dtADR6       <- fGetEXPTable(pTableName = "ADR6" , pSystID = "BP1", pClient = 300)  
-dtAUTH       <- fGetEXPTable(pTableName = "#BIC#AG1AAPD0200"
-                             , pSystID = "BP1", pClient = 300)  
+dtUSR02 <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "USR02",
+    pFields  = list("BNAME", "TRDAT", "CLASS", "USTYP", "UFLAG", "GLTGB"))
+
+dtUSR21 <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "USR21",
+    pOptions = list())
+
+dtADR6 <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "ADR6",
+    pOptions = list())
+
+dtAUTH <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "/BIC/AG1AAPD222",
+    pFields = list("/BIC/G1AAGRP", "/BIC/G1AAOBJ", "/BIC/G1AASIGN", "/BIC/G1AAOPT", "/BIC/G1AAVAL_L",
+                   "RECORDMODE", "/BIC/G1AAVAL_H", "/BIC/G1COUNT")) %T>%
+  setnames(gsub(pattern = "/BIC/", replacement = "", x = names(.)))
 
 # Read data from Local Excel File, note stats need to be refreshed
 dtCOMM       <- as.data.table(read_excel(path = pINFO, sheet = "C.OMMENT"))
@@ -135,6 +116,12 @@ dtWEBI       <- as.data.table(read_excel(path = pINFO, sheet = "W.EBI"))
 # rename columns coming from teh BW statistics
 setnames(dtSTAT, c("S.CDAY", "S.COMPID", "S.QDESCR", "S.USER", "S.QEXEC"))
 
+
+```
+
+# Tidy
+
+```{r Tidy}
 
 ```
 
@@ -156,17 +143,18 @@ Q3. Mapping R1 -> R2
 ### regression test
 [RT GVBNL](http://report.grandvision.global/test/r2fr/rt1/bubbles_bi_gvblx.html)
 
+# Transform
 
 ```{r Transform}
 # remove fields
-dtRSRREPDIR <- 
-  dtRSRREPDIR[, .(SYSTID    , COMPUID , INFOCUBE, COMPTYPE, COMPID, 
-                  RFCSUPPORT, OBJSTAT , READMODE, LASTUSER, MODTIME, 
-                  REPTIME   , GEN1TIME, IS_PLANQUERY)]
+# dtRSRREPDIR <- 
+#   dtRSRREPDIR[, .(SYSTID    , COMPUID , INFOCUBE, COMPTYPE, COMPID, 
+#                   RFCSUPPORT, OBJSTAT , READMODE, LASTUSER, MODTIME, 
+#                   REPTIME   , GEN1TIME, IS_PLANQUERY)]
 
-dtRSZCOMPDIR <-
-  dtRSZCOMPDIR[, .(SYSTID , COMPUID , COMPID  , OWNER, 
-                   ACTIVFL, TIMESTMP, LASTUSED, CREATED)] 
+# dtRSZCOMPDIR <-
+#   dtRSZCOMPDIR[, .(SYSTID , COMPUID , COMPID  , OWNER, 
+#                    ACTIVFL, TIMESTMP, LASTUSED, CREATED)] 
 
 setnames(dtRSRREPDIR,  paste("B", names(dtRSRREPDIR),  sep = "."))
 setnames(dtRSZCOMPDIR, paste("B", names(dtRSZCOMPDIR), sep = "."))
@@ -212,7 +200,7 @@ dtDIR <-
     B.IPT     = substr(B.COMPID, 9, 10),
     B.INS     = substr(B.QPART1, 1, 1),
     B.ITG     = substr(B.QPART1, 1, 2), 
-    B.CHK_IP  = B.INFOCUBE == B.QIP,
+    B.CHK_IP  = B.INFOCUBE == B.QIP,     # Check if name of query is correct
     B.CHK_AA  = B.QAA    == substr(B.COMPID, 7, 8),
     B.CHK_TP  = B.QIP_TP == substr(B.COMPID, 9, 10))]      %>%
   dtRSZCOMPDIR[.,
@@ -263,29 +251,55 @@ dtCOE <-
     fun.aggregate = length,
     value.var     = "B.SYSTID",
     formula       = B.COMPID ~ B.SYSTID)                   %>%
-#  .[ BD1 == 1 & (BA1 + BP1 + BTP + BU1) == 0, 
-#     COE := "CHECK if New/Old Development"]                %>%
+  #  .[ BD1 == 1 & (BA1 + BP1 + BTP + BU1) == 0, 
+  #     COE := "CHECK if New/Old Development"]             %>%
+  .[, COE := ""]                                           %>%  
   .[ BD1 == 1 & (BA1 + BP1) == 0, 
-     COE := "CHECK if New/Old Development"]                %>%
+     COE := paste(COE, 
+                  "CHECK if New/Old Development", 
+                  sep = " \n ")]                           %>%
   .[ (BD1 + BA1) == 2 & (BP1) == 0, 
-     COE := "CHECK if new R2 Development"]                 %>%
-#  .[ (BD1 + BA1 + BTP + BP1) == 4 & (BU1) == 0, 
-#     COE := "TRANSPORT TO BU1"]                            %>%
-#  .[ (BTP) == 0 & (BU1) == 1, 
-#     COE := "TRANSPORT TO BTP"]                            %>%
-#  .[ (BD1 + BA1 + BTP + BP1 + BU1) == 5, 
-#     COE := "CHECK to be Authorized"]                      %>%
+     COE := paste(COE, 
+                  "CHECK if new R2 Development", 
+                  sep = " \n ")]                           %>%
+  #  .[ (BD1 + BA1 + BTP + BP1) == 4 & (BU1) == 0, 
+  #     COE := "TRANSPORT TO BU1"]                         %>%
+  #  .[ (BTP) == 0 & (BU1) == 1, 
+  #     COE := "TRANSPORT TO BTP"]                         %>%
+  #  .[ (BD1 + BA1 + BTP + BP1 + BU1) == 5, 
+  #     COE := "CHECK to be Authorized"]                   %>%
   .[ BD1 == 0, 
-     COE := "DELETE AS NOT in BD1"]                        %>%
+     COE := paste(COE, 
+                  "DELETE AS NOT in BD1", 
+                  sep = " \n ")]                           %>%     
   .[ is.na(COE), 
-     COE := "CHECK SPECIAL CASE?"]                         %>%
+     COE := paste(COE, 
+                  "CHECK SPECIAL CASE?", 
+                  sep = " \n ")]                           %>%     
   .[ substr(B.COMPID, 1, 1) == "Z", 
-     COE := "DELETE or REBUILD as G/L"]                    %>%
+     COE := paste(COE, 
+                  "DELETE or REBUILD as G/L", 
+                  sep = " \n ")]                           %>%     
   .[dtDIR, on = .(B.COMPID), nomatch = NA]                 %>%
   .[ (BD1 + BA1 + BP1) == 3 & is.na(B.G1AAGRP), 
-     COE := "CHECK to be Authorized"]                      %>% 
+     COE := paste(COE, 
+                  "CHECK to be Authorized", 
+                  sep = " \n ")]                           %>%  
   .[ (BD1 + BA1 + BP1) == 3 & !is.na(B.G1AAGRP), 
-     COE := "CHECK if Documented"]  
+     COE := paste(COE, 
+                  "CHECK if Documented", 
+                  sep = " \n ")]                           %>%
+  .[B.DEVCLASS_REP == "$TMP" & B.INS != "Z",
+    COE := paste(COE, 
+                 "DELETE QUERY", 
+                 sep = " \n ")]                            %>%
+  .[B.DEVCLASS_REP == "$TMP" & B.INS != "Z" & 
+      !is.na(B.G1AAVAL_L),
+    COE := paste(COE, 
+                 "REMOVE AUTHORIZATION", 
+                 sep = " \n ")]  
+
+
 ```
 
 
@@ -296,8 +310,8 @@ dtUSR <-
   dtUSR21[dtADR6, on = .(B.SYSTID, B.MANDT = B.CLIENT, 
                          B.PERSNUMBER, B.ADDRNUMBER),
           nomatch = 0]                                     %>%
-  .[, .(B.SYSTID, B.MANDT, B.BNAME, B.SMTP_ADDR)]          %>%
-  .[dtUSR02, on = .(B.SYSTID, B.MANDT, B.BNAME), 
+  .[, .(B.SYSTID, B.CLIENT, B.BNAME, B.SMTP_ADDR)]         %>%
+  .[dtUSR02, on = .(B.SYSTID, B.CLIENT, B.BNAME), 
     nomatch = NA]   
 
 dtUSR[, B.USTATE := ifelse(
@@ -342,22 +356,43 @@ rm(dtADR6     , dtUSR21     , dtUSR02   , dtUSER,
    dtRSRREPDIR, dtRSZCOMPDIR, dtINFOPROV)
 ```
 
-```{r ExportTxt}
+```{r prePare}
 setcolorder(dtINFO, sort(names(dtINFO)))
 
-write.table(
-  dtINFO,
-  file      = file.path(RES, "R12R2.csv"),
-  sep       = ";",
-  row.names = FALSE,
-  col.names = TRUE,
-  quote     = TRUE)
+dtINFO <- 
+  dtINFO[B.OWNER != "SAP"] %>%
+  .[, `:=`(
+    B.ACTIVFL = NULL)]
+
+
+
 ```
 
-```{r ExportXLS, eval=FALSE, include=FALSE}
-system.time(
-  fWriteToSheet(dtINFO, 
-                RES, pXLSX, "DATA", pAppend = FALSE )
-)
+# Model
+
+```{r model_find_$tmp_neq_Z}
+fOpen_in_Excel(pDT = dtINFO, pFN = "neq_z_eq_tmp.csv")
 ```
+
+
+# Visualize
+
+```{r Visualize}
+
+```
+
+
+# Communicate
+
+```{r Communicate}
+
+pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "FileName.csv"))
+
+write.table(
+  pOBJ,
+  file = pFFN, 
+  sep = ";", row.names = FALSE, col.names = TRUE)
+shell.exec(pFFN)
+```
+
 

@@ -100,7 +100,8 @@ T1 <- Sys.time()
 
 dtTBTCO <- 
   fRead_and_Union(
-    pType    = "B",
+    pSIDCLNT = "BP1300",
+    # pType    = "B",
     pTable   = "TBTCO", 
     pOptions = list("(STATUS = 'S' OR STATUS = 'Z')", "AND", 
                     "JOBNAME = 'BI_PROCESS_TRIGGER'"), 
@@ -112,7 +113,8 @@ dtTBTCO <-
 
 dtTBTCP <- 
   fRead_and_Union(
-    pType    = "B",
+    pSIDCLNT = "BP1300",
+    # pType    = "B",
     pTable   = "TBTCP", 
     pOptions = list("STATUS = 'P'", "AND", 
                     "JOBNAME = 'BI_PROCESS_TRIGGER'"), 
