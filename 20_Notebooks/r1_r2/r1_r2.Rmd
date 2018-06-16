@@ -1,6 +1,6 @@
 ---
-title   : "R1 to R2"
-subtitle: "Query Documention"
+title   : "Quality Assurance Report"
+subtitle: "R1 to R2 & Documentation"
 author  : "F.J. Padt"
 date    : "`r format(Sys.time(), '%B %d, %Y')`"
 output:
@@ -16,23 +16,25 @@ editor_options:
 
 [R4DS](http://r4ds.had.co.nz/introduction.html)
 
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)
+
 # Objective
 
 
 ```{r setup}
-# # Cleanse memory
-# rm(list = ls())
-# gc()
+# Cleanse memory
+rm(list = ls())
+gc()
 
 # parameters Settings
-pXLSX    <- "" 
-pWSHT    <- TRUE
-newfiles <- TRUE
-BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+BIDOCsrc <- 
+  normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
 
 # KnitR SetUp location
-KS   <- file.path("~", "RW",
-                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+KS <- 
+  file.path(
+    "~", "RW", "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
 
 # Load functions
 invisible(source(KS))
@@ -50,11 +52,12 @@ invisible(source(KS))
 # Data Import
 
 ```{r Import}
-MIG  <- file.path("C:", "Users", "fpadt", "GrandVision", "iSynergy - 90 BI",
-                  "70. Migration") 
-pINFO    <- file.path(MIG, "INFO_MD.xlsx") 
+MIG   <- file.path(
+  "~", "..", "..",
+  "GrandVision", "iSynergy - 90 BI", "70. Migration") 
+pINFO <- file.path(MIG, "INFO_MD.xlsx") 
 
-dtRSRREPDIR <-
+RSRREPDIR <-
   fRead_and_Union(
     pType    = "B",
     pTable   = "RSRREPDIR",
@@ -62,7 +65,7 @@ dtRSRREPDIR <-
     pFields  = list("COMPUID" , "INFOCUBE", "COMPTYPE", "COMPID" , "RFCSUPPORT", "OBJSTAT",
                     "READMODE", "REPTIME" , "LASTUSER", "MODTIME", "GEN1TIME"  , "IS_PLANQUERY"))
 
-dtRSZCOMPDIR <-
+RSZCOMPDIR <-
   fRead_and_Union(
     pType    = "B",
     pTable   = "RSZCOMPDIR",
@@ -70,31 +73,31 @@ dtRSZCOMPDIR <-
     pFields = list("COMPUID", "COMPID"  , "OWNER", 
                    "ACTIVFL", "TIMESTMP", "LASTUSED", "CREATED"))
 
-dtTADIR <-
+TADIR <-
   fRead_and_Union(
     pSIDCLNT = "BP1300",
     pTable   = "TADIR",
     pOptions = list("SRCSYSTEM like 'B%'"))
 
-dtUSR02 <-
+USR02 <-
   fRead_and_Union(
     pSIDCLNT = "BP1300",
     pTable   = "USR02",
     pFields  = list("BNAME", "TRDAT", "CLASS", "USTYP", "UFLAG", "GLTGB"))
 
-dtUSR21 <-
+USR21 <-
   fRead_and_Union(
     pSIDCLNT = "BP1300",
     pTable   = "USR21",
     pOptions = list())
 
-dtADR6 <-
+ADR6 <-
   fRead_and_Union(
     pSIDCLNT = "BP1300",
     pTable   = "ADR6",
     pOptions = list())
 
-dtAUTH <-
+AUTH <-
   fRead_and_Union(
     pSIDCLNT = "BP1300",
     pTable   = "/BIC/AG1AAPD222",
@@ -115,8 +118,6 @@ dtWEBI       <- as.data.table(read_excel(path = pINFO, sheet = "W.EBI"))
 
 # rename columns coming from teh BW statistics
 setnames(dtSTAT, c("S.CDAY", "S.COMPID", "S.QDESCR", "S.USER", "S.QEXEC"))
-
-
 ```
 
 # Tidy
@@ -146,27 +147,17 @@ Q3. Mapping R1 -> R2
 # Transform
 
 ```{r Transform}
-# remove fields
-# dtRSRREPDIR <- 
-#   dtRSRREPDIR[, .(SYSTID    , COMPUID , INFOCUBE, COMPTYPE, COMPID, 
-#                   RFCSUPPORT, OBJSTAT , READMODE, LASTUSER, MODTIME, 
-#                   REPTIME   , GEN1TIME, IS_PLANQUERY)]
-
-# dtRSZCOMPDIR <-
-#   dtRSZCOMPDIR[, .(SYSTID , COMPUID , COMPID  , OWNER, 
-#                    ACTIVFL, TIMESTMP, LASTUSED, CREATED)] 
-
-setnames(dtRSRREPDIR,  paste("B", names(dtRSRREPDIR),  sep = "."))
-setnames(dtRSZCOMPDIR, paste("B", names(dtRSZCOMPDIR), sep = "."))
-setnames(dtTADIR,      paste("B", names(dtTADIR),      sep = "."))
-setnames(dtUSR02,      paste("B", names(dtUSR02),      sep = "."))
-setnames(dtUSR21,      paste("B", names(dtUSR21),      sep = "."))
-setnames(dtADR6,       paste("B", names(dtADR6),       sep = "."))
-setnames(dtAUTH,       paste("B", names(dtAUTH),       sep = "."))
+setnames(RSRREPDIR,  paste("B", names(RSRREPDIR),  sep = "."))
+setnames(RSZCOMPDIR, paste("B", names(RSZCOMPDIR), sep = "."))
+setnames(TADIR,      paste("B", names(TADIR),      sep = "."))
+setnames(USR02,      paste("B", names(USR02),      sep = "."))
+setnames(USR21,      paste("B", names(USR21),      sep = "."))
+setnames(ADR6,       paste("B", names(ADR6),       sep = "."))
+setnames(AUTH,       paste("B", names(AUTH),       sep = "."))
 
 dtINFOPROV <- 
-  dtOBJR[dtTADIR[, .(B.SYSTID   , B.OBJECT, B.OBJ_NAME, 
-                     B.SRCSYSTEM, B.AUTHOR, B.DEVCLASS )], 
+  dtOBJR[TADIR[, .(B.SYSTID   , B.OBJECT, B.OBJ_NAME, 
+                   B.SRCSYSTEM, B.AUTHOR, B.DEVCLASS )], 
          on = .(O.OBJECT_IP = B.OBJECT), 
          nomatch = 0]                    
 
@@ -178,12 +169,12 @@ dtSTAT[, S.CDAY := format(ymd(S.CDAY), "%d-%m-%Y")]
 
 # Split the Tech Query name in parts and set checks
 dtDIR <- 
-  dtRSRREPDIR[!B.COMPID == "" & B.COMPTYPE == "REP"]       %>%
+  RSRREPDIR[!B.COMPID == "" & B.COMPTYPE == "REP"]       %>%
   .[, paste0("B.QPART", 1:6) := tstrsplit(B.COMPID, "_", 
                                         fixed = TRUE, 
                                         fill  = "")]       %>%
   .[, `:=`(
-    B.IN_BP1 = B.COMPID %in% dtRSRREPDIR[B.SYSTID == "BP1", 
+    B.IN_BP1 = B.COMPID %in% RSRREPDIR[B.SYSTID == "BP1", 
                                          B.COMPID],
     B.QNS     = substr(B.QPART1, 1, 1),  # Name Space
     B.QTG     = substr(B.QPART1, 2, 3),  # Target Group
@@ -203,10 +194,10 @@ dtDIR <-
     B.CHK_IP  = B.INFOCUBE == B.QIP,     # Check if name of query is correct
     B.CHK_AA  = B.QAA    == substr(B.COMPID, 7, 8),
     B.CHK_TP  = B.QIP_TP == substr(B.COMPID, 9, 10))]      %>%
-  dtRSZCOMPDIR[.,
+  RSZCOMPDIR[.,
                on = .(B.SYSTID, B.COMPUID, B.COMPID),
                nomatch = 0]                                %>%
-  dtTADIR[B.OBJECT == "ELEM", 
+  TADIR[B.OBJECT == "ELEM", 
           .(B.SYSTID, B.OBJECT  , B.OBJ_NAME  , B.SRCSYSTEM,
             B.AUTHOR, B.DEVCLASS, B.CREATED_ON)
           ][.,
@@ -230,13 +221,20 @@ dtDIR <-
            c("B.OBJ_NAME_IP"  ,
              "B.SRCSYSTEM_IP" , "B.AUTHOR_IP"    ,
              "B.DEVCLASS_IP"))                             %>%
-  .[, B.CNT := .N, by = .(B.COMPID)]                          
+  .[, B.CNT := .N, by = .(B.COMPID)]       
 
 ```
 
+# Visualize
+
+```{r Visualize}
+
+```
+
+
 ```{r addAuths}
 dtDIR <- 
-  dtAUTH[B.G1AAOBJ == "QUERY" & B.SYSTID == "BP1",
+  AUTH[B.G1AAOBJ == "QUERY" & B.SYSTID == "BP1",
            .(B.G1AAGRP, B.G1AAVAL_L)][dtDIR, 
     on = .(B.G1AAVAL_L == B.COMPID), nomatch = NA ]         %>%
   .[, B.COMPID := B.G1AAVAL_L ]
@@ -302,16 +300,15 @@ dtCOE <-
 
 ```
 
-
 ```{r GetStats}
 # Set Flag User Status
 
 dtUSR <- 
-  dtUSR21[dtADR6, on = .(B.SYSTID, B.MANDT = B.CLIENT, 
+  USR21[ADR6, on = .(B.SYSTID, B.MANDT = B.CLIENT, 
                          B.PERSNUMBER, B.ADDRNUMBER),
           nomatch = 0]                                     %>%
   .[, .(B.SYSTID, B.CLIENT, B.BNAME, B.SMTP_ADDR)]         %>%
-  .[dtUSR02, on = .(B.SYSTID, B.CLIENT, B.BNAME), 
+  .[USR02, on = .(B.SYSTID, B.CLIENT, B.BNAME), 
     nomatch = NA]   
 
 dtUSR[, B.USTATE := ifelse(
@@ -349,11 +346,11 @@ dtINFO <-
 ```
 
 ```{r CleanseMem}
-rm(dtADR6     , dtUSR21     , dtUSR02   , dtUSER,
-   dtTEAM     , dtTADIR     , dtSTAT    , dtPATH, 
+rm(ADR6     , USR21     , USR02   , dtUSER,
+   dtTEAM     , TADIR     , dtSTAT    , dtPATH, 
    dtDIR      , dtCOE       , dtUSR,
    dtCOMM      , dtWEBI      , dtOBJR, 
-   dtRSRREPDIR, dtRSZCOMPDIR, dtINFOPROV)
+   RSRREPDIR, RSZCOMPDIR, dtINFOPROV)
 ```
 
 ```{r prePare}
@@ -364,8 +361,6 @@ dtINFO <-
   .[, `:=`(
     B.ACTIVFL = NULL)]
 
-
-
 ```
 
 # Model
@@ -374,25 +369,11 @@ dtINFO <-
 fOpen_in_Excel(pDT = dtINFO, pFN = "neq_z_eq_tmp.csv")
 ```
 
-
-# Visualize
-
-```{r Visualize}
-
-```
-
-
 # Communicate
 
 ```{r Communicate}
 
-pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "FileName.csv"))
-
-write.table(
-  pOBJ,
-  file = pFFN, 
-  sep = ";", row.names = FALSE, col.names = TRUE)
-shell.exec(pFFN)
+# fOpen_in_Excel(pDT = dtxxx, pFN = "dtxxx.csv")
 ```
 
 

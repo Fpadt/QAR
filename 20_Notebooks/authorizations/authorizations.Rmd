@@ -1,0 +1,170 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Users & Authorization"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)
+
+# Objective
+
+
+```{r setup}
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# parameters Settings
+BIDOCsrc <- 
+  normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS <- 
+  file.path(
+    "~", "RW", "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+
+T1 <- Sys.time()
+
+USGRP <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "USGRP")
+
+USGRPT <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "USGRPT", 
+    pOptions = list("SPRSL = 'E'"))
+
+USGRP_USER <-
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "USGRP_USER",
+    pFields  = list("BNAME", "USERGROUP"))
+
+USR <- fGetSAPUsers(pType = "B")
+
+AGR_USERS <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "AGR_USERS",
+    pFields  = list("AGR_NAME", "UNAME", "TO_DAT"))
+
+# AGR_DEFINE
+
+# Query & Object Authorization
+AUTH       <-
+  fRead_and_Union(
+    pSIDCLNT = c("BU1300", "BA1300", "BP1300"),
+    pTable   = "/BIC/AG1AAPD222",
+    pOptions = list(),
+    pFields  = list(
+      '/BIC/G1AAGRP' , '/BIC/G1AAOBJ'  , '/BIC/G1AAOPT'  , 
+      '/BIC/G1AASIGN', '/BIC/G1AAVAL_H', '/BIC/G1AAVAL_L', 
+      '/BIC/G1COUNT' , 'RECORDMODE'))                       %T>%
+  setnames(gsub("/BIC/", "", names(.)))
+
+Sys.time() - T1
+```
+
+# Tidy
+
+```{r Tidy}
+
+```
+
+# Transform
+
+```{r Transform}
+
+dtUSR_lng <- 
+  copy(USR)  
+
+dtUSR_wid <- 
+  dcast.data.table(
+    data    = dtUSR_lng,
+    formula = BNAME 
+    + USTYP + CLASS + TRDAT + USR_GLTGB  + UFLAG
+    ~ SYSTID,
+    fun.aggregate = length,
+    value.var = "SYSTID")                    %>%  
+  .[, Total := BS1 + BD1 + BU1 + BA1 + BP1]        %T>%
+  setcolorder(
+    c("BNAME", "USTYP", "CLASS", "TRDAT", "USR_GLTGB", "UFLAG",
+      "BS1"  , "BD1"  , "BU1"  , "BA1"  , "BP1"      , "Total"))
+
+dtUSR_GRP <- 
+  copy(USGRP_USER)
+
+dtUSR_AGR <- 
+  copy(AGR_USERS)          %T>%
+  setnames(c("TO_DAT"), 
+           c("AGR_TO_DAT"))
+
+dtAUTH <- 
+  dtUSR_lng                                            %>%
+  dtUSR_AGR[., on = .(SYSTID, CLIENT, UNAME = BNAME)]  %>%
+  dtUSR_GRP[., on = .(SYSTID, CLIENT, BNAME = UNAME), 
+            allow.cartesian = TRUE]
+
+dtRES <- USR02[AGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+
+```
+
+# Visualize
+
+```{r Visualize}
+
+```
+
+# Model
+
+```{r Model}
+dtLOCK <- 
+  copy(USR)             %>%
+  .[USTYP     == "A"     &
+    USR_GLTGB  > today() &
+    SYSTID    == "BP1"   & 
+    LDAYS     >= 100     & 
+    USTATE == "VALID"    ]
+
+```
+
+# Communicate
+
+```{r Communicate}
+fOpen_in_Excel(pDT = dtUSR_wid, pFN = "dtUSR_wid.csv")
+fOpen_in_Excel(pDT = dtAUTH   , pFN = "auths.csv")
+fOpen_in_Excel(pDT = dtRES    , pFN = "RES.csv")
+fOpen_in_Excel(pDT = dtLOCK   , pFN = "LOCK.csv")
+```
+
+

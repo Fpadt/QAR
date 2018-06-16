@@ -700,3 +700,82 @@ fOpen_in_Excel <-
       sep = ";", row.names = F)
     shell.exec(normalizePath(pFFN))    
   }
+
+sdate2rdate <- 
+  function(pSAP_DATE) {
+    make_date(
+      year  = substr(pSAP_DATE, 1, 4), 
+      month = substr(pSAP_DATE, 5, 6), 
+      day   = substr(pSAP_DATE, 7, 8))}
+
+fGetSAPUsers <- 
+  function(pSIDCLNT, pEnv, pType){
+    
+    if (missing(pSIDCLNT)) {   
+      pSID.lng <- fGetSID(pEnv, pType)
+    } else {
+      pSID.lng <- pSIDCLNT
+    }
+    
+    # User Id, last logon, validity period and status
+    USR02 <- 
+      fRead_and_Union(
+        pSIDCLNT = pSID.lng, 
+        pTable   = "USR02", 
+        pOptions = list(),
+        pFields  = list(
+          'ANAME'   , 'BNAME'     , 'ERDAT', 
+          'TRDAT'   , 'LTIME'     , 'GLTGV', 'GLTGB', 
+          'USTYP'   , 'CLASS'     , 'LOCNT', 'UFLAG',
+          'PWDSTATE', 'PWDINITIAL', 'PWDLOCKDATE'))
+    
+    # PersNumber
+    USR21 <- 
+      fRead_and_Union(
+        pSIDCLNT = pSID.lng, 
+        pTable   = "USR21") %>%
+      .[, MANDT := NULL]
+    
+    # Email
+    ADR6 <- 
+      fRead_and_Union(
+        pSIDCLNT = pSID.lng, 
+        pTable   = "ADR6")
+    
+    # User Name
+    ADRP <-
+      fRead_and_Union(
+        pSIDCLNT = pSID.lng, 
+        pTable   = "ADRP",
+        pOptions = list("DATE_TO > '20180101'"),
+        pFields  = list("PERSNUMBER", "NAME_FIRST", "NAME_LAST", "NAME_TEXT"))
+    
+    # convert SAP date to R-Date
+    idx_col <- c("TRDAT", "GLTGB")
+    USR02 <-
+      USR02                                                    %>%
+      .[, (idx_col) := map(.SD, sdate2rdate),
+        .SDcols = idx_col]                                     %>%
+      .[, LDAYS := today() - TRDAT ]
+    
+    dtUSR_lng <- 
+      ADRP                                                     %>%
+      .[USR21, 
+        on = .(SYSTID, CLIENT, PERSNUMBER)]                    %>%
+      .[ADR6, 
+        on = .(SYSTID, CLIENT, PERSNUMBER, ADDRNUMBER),
+        nomatch = 0]                                           %>%
+      .[, .(SYSTID, CLIENT, BNAME, SMTP_ADDR, 
+            NAME_FIRST, NAME_LAST, NAME_TEXT)]                 %>%
+      .[USR02, on = .(SYSTID, CLIENT, BNAME), 
+        nomatch = NA]                                          %>%
+      .[, USTATE := ifelse(GLTGB >= today(),
+                           "VALID", "INVALID") ]               %>%
+      .[, USTATE := ifelse(
+        USTATE == "VALID" & UFLAG == "0",
+        "VALID", "LOCKED") ]                                   %>%
+      setnames(c("GLTGB"), c("USR_GLTGB"))                    %T>%
+      setkey(BNAME)
+    
+    return(dtUSR_lng)
+  }

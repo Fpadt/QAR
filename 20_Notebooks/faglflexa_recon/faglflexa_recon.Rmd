@@ -1,6 +1,6 @@
 ---
-title   : ""
-subtitle: ""
+title   : "Quality Assurance Report"
+subtitle: "FAGLFLEXA reconcilliation"
 author  : "F.J. Padt"
 date    : "`r format(Sys.time(), '%B %d, %Y')`"
 output:
@@ -16,23 +16,25 @@ editor_options:
 
 [R4DS](http://r4ds.had.co.nz/introduction.html)
 
-# Objective
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)
 
+# Objective
+Check wheter phantom records exist in BI
 
 ```{r setup}
-# # Cleanse memory
-# rm(list = ls())
-# gc()
+# Cleanse memory
+rm(list = ls())
+gc()
 
 # parameters Settings
-pXLSX    <- "" 
-pWSHT    <- TRUE
-newfiles <- TRUE
-BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+BIDOCsrc <- 
+  normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
 
 # KnitR SetUp location
-KS   <- file.path("~", "RW",
-                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+KS <- 
+  file.path(
+    "~", "RW", "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
 
 # Load functions
 invisible(source(KS))
@@ -50,6 +52,7 @@ invisible(source(KS))
 # Data Import
 
 ```{r Import}
+
 fCheck_FIGL <- 
   function(pDOCNR, pRBUKRS, pRYEAR) {
     fRead_and_Union(
@@ -110,14 +113,7 @@ dtG1GLPD522 <-
                    "FI_AWTYP"  , "RSPL_CRUSR", "/BIC/G1TMSTMP1",
                    "/BIC/G1GLACOCD"))
 
-
-
 ```
-
-
-
-
-
 
 # Tidy
 
@@ -147,13 +143,7 @@ dtG1GLPD522 <-
 
 ```{r Communicate}
 
-pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "FileName.csv"))
-
-write.table(
-  pOBJ,
-  file = pFFN, 
-  sep = ";", row.names = FALSE, col.names = TRUE)
-shell.exec(pFFN)
+fOpen_in_Excel(pDT = dtxxx, pFN = "dtxxx.csv")
 ```
 
 
