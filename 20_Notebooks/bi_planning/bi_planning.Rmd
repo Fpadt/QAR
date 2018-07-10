@@ -1,0 +1,242 @@
+---
+title   : "COE Delivery Planning"
+subtitle: "BI-WorkLoad"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+    highlight: tango
+    theme: spacelab
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)
+
+# Objective
+
+
+```{r setup}
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# parameters Settings
+BIDOCsrc <- 
+  normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS <- 
+  file.path(
+    "~", "RW", "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import01}
+
+# Change names of SSM Headers 
+dtCR_HDR <- fread(file.path("11_prep_data", "CR_HDR.csv"))
+dtCD_HDR <- fread(file.path("11_prep_data", "CD_HDR.csv"))
+
+# determine version of filename
+version <- 
+  paste0(format(today(), "%Y%m%d"), "_", 
+         "W", isoweek(today()))          %T>%
+  print(.)
+
+# Status Order
+status <- c("New", "In Review", "Awaiting CAB/GDA", "Create FD", "Being Implemented")
+dtStatusOrder <- 
+  data.table(
+    CR_STATUS = status,
+    CR_ST_ORD = paste0(1:5, ": ", status))
+
+# Developers
+cDEV <- c(CD_DEVELOPER = 
+  "Floris Padt",             # COE
+  "Chris Houlder",           # SAP Indigo
+  "Pradeep",                 # AMS
+  "Darshan",                 # AMS
+  "Mohit",                   # AMS
+  "Arjun",                   # AMS  
+  "Rene van de Lei",         # EXPERTUM
+  "Dirk Kemper",             # EXPERTUM
+#  "Sander Van Willigen",    # EXPERTUM
+#  "Sjoerd Van Middelkoop",  # EXPERTUM
+  "Kasper Groen")            # GAAN
+
+# Daily Tasks
+cTASK <- c(
+  "0: Management",
+  "0: Monitoring",
+  "0: Service Requests",
+  "0: Incidents",
+  "0: House Keeping",
+  "0: Out Of Office")
+
+# Expand Daily Tasks per Developer  
+dtEXP <- 
+  expand.grid(
+    cDEV, cTASK)  %>%
+  as.data.table() %T>%
+  setnames(c("CD_DEVELOPER", "CR_URGENCY"))
+```
+
+```{r Import02}
+
+# read change requests
+dtCR <- 
+  fread(file.path(
+    "10_raw_data", 
+    paste0("CR", version, ".csv")))         %>% 
+  .[, dtCR_HDR[NEW == '', OLD] := NULL]     %T>%
+  setnames(
+    dtCR_HDR[NEW != '', OLD],
+    dtCR_HDR[NEW != '', NEW])
+
+# read cds
+dtCD <- 
+  fread(file.path(
+    "10_raw_data", 
+    paste0("CD", version, ".csv")))         %>%
+  .[, dtCD_HDR[NEW == '', OLD] := NULL]     %T>%
+  setnames(
+    dtCD_HDR[NEW != '', OLD],
+    dtCD_HDR[NEW != '', NEW])               %>%
+  .[CD_TRAN_TYPE != "SMIM"]           
+
+# replicon TimeSheet Overview
+# dtTSO <- 
+#   read_xlsx(
+#     path  = file.path(RAW, "TSO_BI.xlsx"), 
+#     sheet = "TimeSheet Overview 2017-12-11")
+
+# replicon TimeSheet Overview
+dtRVW <- 
+  read_xlsx(
+    path  = file.path("11_prep_data", "COE_RFC_REVIEW.xlsx"), 
+    sheet = "REVIEW")
+
+# TABLE <- 
+#   fRead_and_Union(
+#     pType    = "B", 
+#     pTable   = "", 
+#     pOptions = list("SPRSL = 'E'"),
+#     pFields  = fGetFields(pSYSTID = "BP1", pTable = "USGRPT", pCLIENT = "300"))
+```
+
+# Tidy
+
+```{r Tidy}
+
+# Combine data set and Convert character to DateTime
+# note the CDs contain CDs belonging to Incidents
+dtALL <- 
+  dtCD[dtCR, on = .(CD_REQ_ID == CR_REQ_ID), 
+       nomatch = NA]                                        %>%
+  .[dtStatusOrder, on = .(CR_STATUS)]                       %>%
+  .[, CR_STATUS := NULL]                                   %T>%
+  setnames("CR_ST_ORD", "CR_STATUS")                        %>%
+  .[, `:=`(
+    CR_CR_ON     = dmy(.[, substr(CR_CR_ON    , 1, 10)]),
+    CR_REQ_START = dmy(.[, substr(CR_REQ_START, 1, 10)]),
+    CR_REQ_END   = dmy(.[, substr(CR_REQ_END  , 1, 10)]),
+    CR_LCH_ON    = dmy(.[, substr(CR_LCH_ON   , 1, 10)]),
+    CR_DUE_BY    = dmy(.[, substr(CR_DUE_BY   , 1, 10)]),
+    CD_CR_ON     = dmy(.[, substr(CD_CR_ON    , 1, 10)]),
+    CD_REQ_START = dmy(.[, substr(CD_REQ_START, 1, 10)]),
+    CD_REQ_END   = dmy(.[, substr(CD_REQ_END  , 1, 10)]),
+    CD_DUE_BY    = dmy(.[, substr(CD_DUE_BY   , 1, 10)]),
+    CD_LCH_ON    = dmy(.[, substr(CD_LCH_ON   , 1, 10)]))] %T>%
+  setnames("CD_REQ_ID", "CR_REQ_ID")
+
+# filter on BI
+dtBI <- 
+  copy(dtALL) %>%
+  .[substr(CR_CATEGORY,1,5) == "SAP B"] %>%
+  .[, CR_URGENCY := ifelse(
+    CR_URGENCY == "", 
+    "5: BackLog", CR_URGENCY)]
+
+```
+
+# Transform
+
+```{r Transform01}
+cols <- 
+  c(dtCR_HDR[NEW != '', NEW], 
+    dtCD_HDR[NEW != '', NEW]) %>%
+  setdiff("CD_REQ_ID")
+
+setcolorder(x = dtBI, neworder = cols)
+
+```
+
+
+```{r Transform02, eval=FALSE, include=FALSE}
+
+dtSUB <- 
+  copy(dtBI) %>%
+  .[, .(
+    CR_TRAN_TYPE , CR_URGENCY  , CR_SOL_PARTY,
+    CR_REQ_ID    , CR_DESCR    , CR_STATUS, CR_CR_ON,     
+    CD_ID        , CD_DESCR    , CD_STATUS, CD_CR_ON, 
+    CR_SUP_TEAM  , CD_DEVELOPER, CD_TESTER, CR_CUR_PROCESSOR, 
+    CD_COE_EXP)] %T>%
+  setorder(-CR_TRAN_TYPE, CR_STATUS, CR_URGENCY, CR_REQ_ID, CD_ID )
+
+dtADD <- 
+  copy(dtSUB)[0] %>%
+  .[dtEXP, on = .(CR_URGENCY, CD_DEVELOPER)]
+
+dtPLAN <- 
+  list(dtSUB, dtADD) %>%
+  rbindlist()
+
+setkey(dtPLAN, CR_URGENCY, CR_STATUS)
+```
+
+# Visualize
+
+```{r Visualize}
+# View(dtCD[ CD_REQ_ID %in% setdiff(unique(dtCD$CD_REQ_ID), unique(dtCR$CR_REQ_ID))])
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+fOpen_in_Excel(pDT = dtALL ,  pFN = "dtALL.csv")
+fOpen_in_Excel(pDT = dtBI  ,  pFN = "dtBI.csv")
+fOpen_in_Excel(pDT = dtSUB ,  pFN = "dtSUB.csv")
+fOpen_in_Excel(pDT = dtPLAN,  pFN = "dtPLAN.csv")
+
+```
+
+

@@ -135,7 +135,7 @@ dtAUTH <-
   dtUSR_GRP[., on = .(SYSTID, CLIENT, BNAME = UNAME), 
             allow.cartesian = TRUE]
 
-dtRES <- USR02[AGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+dtRES <- USR[AGR_USERS, on = .(SYSTID, BNAME = UNAME )]
 
 ```
 

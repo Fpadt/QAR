@@ -1,0 +1,171 @@
+---
+title: "GEO"
+author: "F.J.Padt"
+date: "24 februari 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+[DESIGN](https://projects.gvshare.com/iSynergy/01_Release_1/06._Reporting/02._Design/01._FDs/R20_POS Sales - Margin/)
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+rm(list=ls())
+gc()
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+library(tidyr)
+
+# Data Settings
+fECHO    <- TRUE
+fEVAL    <- TRUE
+fRESULTS <- 'hide' 
+fIMAGE   <- TRUE 
+
+# SAP systems to use
+pECC_SYST <- "RP1"
+pECC_CLNT <- "300"
+pBI_SYST  <- "BP1" 
+pBI_CLNT  <- "300"
+
+# Data Settings
+pROWS     <- -1L
+pSMALL    <- 1000
+pEXMP     <- 50 
+pEXP      <- FALSE
+pPath     <- "./60_Results" 
+pXLSX     <- paste0(pBI_SYST, "GEO") 
+
+# Open Excel for storing results
+if(file.exists(paste0(pPath, "/", pXLSX, ".xlsx")) == TRUE){
+   file.remove(paste0(pPath, "/", pXLSX, ".xlsx"))
+}
+
+fWriteToSheet(data.frame(ECCSYST = pECC_SYST, 
+                         ECCCLNT = pECC_CLNT,
+                         BI_SYST = pBI_SYST ,
+                         BI_CLNT = pBI_CLNT), 
+              pPath, pXLSX, "PARAM", pAppend = FALSE )
+```
+
+```{r}
+remove_mdot <- function(x){
+  sub("#mydot#", ".",
+                      gsub("\\.", "",
+                      sub("\\.", "#mydot#", x)))
+}
+
+BW_PP1 <- fGetEXPTable(pTableName = "#BI0#PPLANT_P1", 
+               pSystID = pBI_SYST, pClient = "300")
+BW_PP2 <- fGetEXPTable(pTableName = "#BI0#PPLANT_P2", 
+               pSystID = pBI_SYST, pClient = "300")
+BW_PP <- BW_PP1[BW_PP2, on = .(SYSTID, PLANT)]
+BW_PP[, ALTITUDE:= "0.000"]
+BW_PP <- BW_PP[, .(PLANT, G1SMTPADR, G1SMTPREG, G1SMTPMNG, G1SMTPLAB, ALTITUDE)]
+setkey(BW_PP, PLANT)
+
+rm(BW_PP1, BW_PP2)
+```
+
+```{r GVBNL}
+TMP1 <-
+  fread(file.path("C:", "FTP", "pearle_stores_be_go.csv"),
+  sep = "~",  colClasses = "character")
+TMP1 <- TMP1[, .(Storeid, latitude, longitude)]
+TMP1[, Storeid := str_pad(Storeid, width = 4, side = "left", pad = "0")]
+setnames(TMP1, 
+         c("Storeid", "latitude", "longitude"),
+         c("PLANT"  , "LATITUDE", "LONGITUDE"))
+setkey(TMP1, PLANT)
+
+TMP2 <- as.data.table(read.csv("C:/FTP/pearle_stores_nl_ey.csv", 
+                               header=FALSE,
+                               stringsAsFactors = FALSE))
+TMP2 <- TMP2[, .(V1, V23, V24)]
+TMP2[, V1 := str_pad(V1, width = 4, side = "left", pad = "0")]
+setnames(TMP2, 
+         c("V1", "V23", "V24"),
+         c("PLANT", "LATITUDE", "LONGITUDE"))
+setkey(TMP2, PLANT)
+
+TMP3 <- as.data.table(read.csv("C:/FTP/pearle_stores_nl_PE.csv", 
+                               header=FALSE,
+                               stringsAsFactors = FALSE))
+TMP3 <- TMP3[, .(V1, V23, V24)]
+TMP3[, V1 := str_pad(V1, width = 4, side = "left", pad = "0")]
+setnames(TMP3, 
+         c("V1", "V23", "V24"),
+         c("PLANT", "LATITUDE", "LONGITUDE"))
+setkey(TMP3, PLANT)
+
+TMP4 <- as.data.table(read.csv("C:/FTP/pearle_stores_be_pe.csv", 
+                               sep="~", header=FALSE, 
+                               stringsAsFactors = FALSE))
+TMP4 <- TMP4[, .(V1, V86, V87)]
+TMP4[, V1 := str_pad(V1, width = 4, side = "left", pad = "0")]
+setnames(TMP4, 
+         c("V1", "V86", "V87"),
+         c("PLANT", "LATITUDE", "LONGITUDE"))
+setkey(TMP4, PLANT)
+
+GVBNL <- rbind(TMP1, TMP2, TMP3, TMP4)
+setkey(GVBNL, PLANT)
+GVBNL[, `:=`(LATITUDE = as.double(LATITUDE), LONGITUDE = as.double(LONGITUDE))]
+GVBNL <- GVBNL[complete.cases(GVBNL)]
+
+rm(TMP1, TMP2, TMP3, TMP4)
+
+
+```
+
+```{r UK}
+VEUK <- as.data.table(
+  read.csv("C:/FTP/SMTP_GEO_UK.csv", 
+                        sep=";", stringsAsFactors=FALSE))
+
+VEUK[, `:=`(LONGITUDE = as.double(remove_mdot(LONGITUDE)), 
+            LATITUDE  = as.double(remove_mdot(LATITUDE)))]
+
+```
+
+```{r}
+TMP <- rbind(GVBNL, VEUK)
+BW_PP <- TMP[BW_PP, on=.(PLANT)]
+BW_PP <- BW_PP[complete.cases(BW_PP), 
+               .(PLANT, G1SMTPADR, G1SMTPREG, G1SMTPMNG, G1SMTPLAB, 
+                 ALTITUDE, LATITUDE, LONGITUDE)]
+rm(TMP)
+```
+
+```{r}
+write.table(x = BW_PP, file = "c:/FTP/SMTP_GEO.csv", quote = TRUE,
+            sep = ";", row.names = FALSE, col.names = TRUE, dec = ".")
+```
+
+```{r}
+BP_PP1 <- fGetEXPTable(pTableName = "#BI0#PPLANT", 
+               pSystID = "BP1", pClient = "300")
+BA_PP1 <- fGetEXPTable(pTableName = "#BI0#PPLANT", 
+               pSystID = "BA1", pClient = "300")
+BP_PP1 <- BP_PP1[PLANT %in% intersect(BA_PP1$PLANT, BP_PP1$PLANT) ]
+BA_PP1 <- BA_PP1[PLANT %in% intersect(BA_PP1$PLANT, BP_PP1$PLANT) ]
+
+BP_PP1[, SYSTID:= NULL]
+BA_PP1[, SYSTID:= NULL]
+
+setkey(BP_PP1, PLANT)
+setkey(BA_PP1, PLANT)
+
+BP_PP1 <- BP_PP1[PLANT %in% intersect(BW_PP$PLANT, BP_PP1$PLANT) ]
+BA_PP1 <- BA_PP1[PLANT %in% intersect(BW_PP$PLANT, BP_PP1$PLANT) ]
+
+all.equal(BP_PP1, BA_PP1)
+identical(BP_PP1, BA_PP1)
+```
+

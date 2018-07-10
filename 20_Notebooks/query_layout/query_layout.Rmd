@@ -1,0 +1,247 @@
+---
+title   : "Quality Assurance Report"
+subtitle: ""
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)
+
+# Objective
+
+
+```{r setup}
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# parameters Settings
+BIDOCsrc <- 
+  normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS <- 
+  file.path(
+    "~", "RW", "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+
+RSRREPDIR <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSRREPDIR",
+    pOptions = list("OBJVERS = 'A'")) %>%
+  .[substr(COMPID, 1, 2) != "!!"]
+
+RSZCOMPDIR <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZCOMPDIR",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZCEL <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZCEL",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZCHANGES <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZCHANGES",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZCOMPIC <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZCOMPIC",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZELTATTR <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZELTATTR",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZELTDIR <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZELTDIR",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZELTPRIO <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZELTPRIO",
+    pOptions = list("OBJVERS = 'A'"))
+
+# RSZELTPROP <- 
+#   fRead_and_Union(
+#     pSIDCLNT = "BP1300",
+#     pTable   = "RSZELTPROP",
+#     pOptions = list("OBJVERS = 'A'"))
+
+RSZOPRATOR <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZOPRATOR",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZELTTXT <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZELTTXT",
+    pOptions = list("LANGU = 'E'"))
+
+RSZELTXREF <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZELTXREF",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZGLOBV <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZGLOBV",
+    pOptions = list("OBJVERS = 'A'"),
+    pFields  = list("VARUNIID", "VPARSEL", "VARINPUT", "ENTRYTP",
+                    "ATTRINM" , "VNAM"   , "VARTYP"  , "VPROCTP", "IOBJNM"   ))
+
+RSZSELECT <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZSELECT",
+    pOptions = list("OBJVERS = 'A'"))
+
+RSZCALC <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSZCALC",
+    pOptions = list("OBJVERS = 'A'"))
+
+DD03L_GL <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "DD03L",
+    pOptions = list("TABNAME like '/BIC/AG1GL%'"),
+    pFields  = list("TABNAME", "FIELDNAME", "POSITION")) %>%
+  .[, POSITION := as.integer(POSITION)]                  %>%
+  .[, `:=`( FIELDNAME = sub("/BIC/" , "", FIELDNAME),
+            TABNAME   = sub("/BIC/A", "", TABNAME  ))]   %>%
+  .[TABNAME %in% c("G1GLPD512", "G1GLPD522")]
+
+CWBNTHEAD <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "CWBNTHEAD",
+    pOptions = list())
+
+CWBNTSTATT <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "CWBNTSTATT",
+    pOptions = list("SPRAS = 'E'"))
+
+# Implemented notes by us
+CWBNTCUST <- 
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "CWBNTCUST",
+    pOptions = list())
+
+
+```
+
+SELECT RSRREPDIR.COMPID, RSZELTXREF.INFOCUBE, RSZSELECT.IOBJNM
+FROM ((RSRREPDIR INNER JOIN RSZCOMPDIR ON (RSRREPDIR.OBJVERS = RSZCOMPDIR.OBJVERS) AND (RSRREPDIR.COMPUID = RSZCOMPDIR.COMPUID) AND (RSRREPDIR.SYSTID = RSZCOMPDIR.SYSTID)) INNER JOIN (RSZELTXREF INNER JOIN RSZELTXREF AS RSZELTXREF_1 ON (RSZELTXREF.TELTUID = RSZELTXREF_1.SELTUID) AND (RSZELTXREF.SYSTID = RSZELTXREF_1.SYSTID)) ON (RSZCOMPDIR.COMPUID = RSZELTXREF.SELTUID) AND (RSZCOMPDIR.SYSTID = RSZELTXREF.SYSTID)) INNER JOIN RSZSELECT ON (RSZELTXREF_1.SYSTID = RSZSELECT.SYSTID) AND (RSZELTXREF_1.TELTUID = RSZSELECT.ELTUID)
+WHERE (((RSRREPDIR.COMPID) Like "ZH*") AND ((RSZSELECT.IOBJNM)="0MATL_GRP_3" Or (RSZSELECT.IOBJNM)="0MATL_GROUP"));
+
+KeyFIg
+SELECT LBP_RSRREPDIR.COMPID, LBP_RSZCOMPDIR.COMPID, LBP_RSZELTXREF.TELTUID, LBP_RSZELTXREF.LAYTP
+FROM (LBP_RSRREPDIR INNER JOIN LBP_RSZCOMPDIR ON (LBP_RSRREPDIR.COMPUID = LBP_RSZCOMPDIR.COMPUID) AND (LBP_RSRREPDIR.OBJVERS = LBP_RSZCOMPDIR.OBJVERS)) INNER JOIN LBP_RSZELTXREF ON LBP_RSZCOMPDIR.COMPUID = LBP_RSZELTXREF.SELTUID
+WHERE (((LBP_RSRREPDIR.COMPID)="ZHC41VEROOSTRUCTUUR552"));
+
+SELECT LWP_RSRREPDIR.COMPUID, LWP_RSZCOMPDIR.COMPID, LWP_RSZELTXREF.TELTUID, LWP_RSZELTXREF.LAYTP, LWP_RSZSELECT.IOBJNM, LWP_RSZSELECT.CONIOBJNM, LWP_RSZSELECT_1.IOBJNM
+FROM ((((LWP_RSRREPDIR INNER JOIN LWP_RSZCOMPDIR ON (LWP_RSRREPDIR.OBJVERS = LWP_RSZCOMPDIR.OBJVERS) AND (LWP_RSRREPDIR.COMPUID = LWP_RSZCOMPDIR.COMPUID)) INNER JOIN LWP_RSZELTXREF ON LWP_RSZCOMPDIR.COMPUID = LWP_RSZELTXREF.SELTUID) LEFT JOIN LWP_RSZSELECT ON LWP_RSZELTXREF.TELTUID = LWP_RSZSELECT.ELTUID) LEFT JOIN LWP_RSZELTXREF AS LWP_RSZELTXREF_2 ON LWP_RSZELTXREF.TELTUID = LWP_RSZELTXREF_2.SELTUID) LEFT JOIN LWP_RSZSELECT AS LWP_RSZSELECT_1 ON LWP_RSZELTXREF_2.TELTUID = LWP_RSZSELECT_1.ELTUID
+WHERE (((LWP_RSZSELECT.IOBJNM) Like "*0DISTR_CHAN*")) OR (((LWP_RSZSELECT.CONIOBJNM) Like "*0DISTR_CHAN*")) OR (((LWP_RSZSELECT_1.IOBJNM) Like "*0DISTR_CHAN*"));
+
+# Tidy
+
+```{r Tidy}
+dtRSRREPDIR <- 
+  copy(RSRREPDIR) %>%
+  .[INFOCUBE == "G1GLMP54", 
+    .(SYSTID  , CLIENT  , COMPID , COMPTYPE, 
+      GENUNIID, INFOCUBE, REPTIME, LASTUSER, COMPUID) ]
+
+dtRSZCOMPDIR <- 
+  copy(RSZCOMPDIR)
+```
+
+# Transform
+
+```{r Transform}
+dtQUERY <- 
+  RSRREPDIR[RSZCOMPDIR, on = .(OBJVERS, COMPUID, SYSTID, CLIENT, OBJVERS)] %>%
+  .[RSZELTXREF, on = .(COMPUID = SELTUID, SYSTID, CLIENT, OBJVERS)]        %>%
+  .[RSZELTXREF, on = .(TELTUID = SELTUID, SYSTID, CLIENT, OBJVERS)]
+
+
+
+dtDD03L_wide <- 
+  dcast.data.table(
+    data    = DD03L_GL,
+    formula = FIELDNAME ~ TABNAME,
+    fun.aggregate = length,
+    value.var = "POSITION") %T>%
+  setkey(FIELDNAME)         %>%
+  .[, tot := G1GLPD512 + G1GLPD522]
+```
+
+# Visualize
+
+```{r Visualize}
+
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+
+fOpen_in_Excel(pDT = dtDD03L_wide, pFN = "dtDD03L_wide.csv")
+```
+
+

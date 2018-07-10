@@ -50,14 +50,74 @@ invisible(source(KS))
 # Data Import
 
 ```{r Import}
+AGR_USERS <-  
+  fRead_and_Union(
+    pSIDCLNT = c("BP1300"),
+    pTable   = "AGR_USERS") %>%
+  .[, TO_DAT := make_date(substr(TO_DAT, 1, 4), substr(TO_DAT, 5, 6), substr(TO_DAT, 7, 8)) ] %>%
+  .[TO_DAT >= today()] %>%
+  .[, .(SYSTID, CLIENT, AGR_NAME, UNAME, TO_DAT )] %>%
+  .[substr(AGR_NAME, 1,8) == 'ZC:GVBI_']
+
+AGR_USERS_BCK <- 
+  copy(AGR_USERS)
+
+# USR02 <- 
+#   fRead_and_Union(
+#     # pEnv   = "B",
+#     pSIDCLNT = c("BD1100","BU1300","BA1300","BP1300"),    
+#     pTable = "USR02",
+#     pFields = list("BNAME", "TRDAT", "LTIME")  )
+# 
+# fOpen_in_Excel(
+#   USR02, 
+#   pFN = "USR02.csv")
+```
+
+# no authorisation for se37 might change the user to RFC User
+# USR02 <-
+#   fRead_and_Union(
+#     pSIDCLNT = "MP1200",
+#     pTable   = "USR02",
+#     pOptions = list())
 
 dtKEY <- 
   fread("APOLLO_KEY_USERS.csv")
+
+dtEVAL <- 
+  read_excel(
+    path    = "Evaluation_form_results.xlsx",
+    sheet   = "RESULTS",
+    trim_ws = TRUE) %>%
+  data.table()
 ```
 
 # Tidy
 
 ```{r Tidy}
+
+dtLabels <- 
+  data.table(
+    SUB = c(
+      "BEFORE"   , "AFTER"   , "OBJ1"       , "OBJ2", "OBJ3",
+      "TEACHING" , "HANDOUTS", "DISCUSSIONS",
+      "EXERCISES", "SUPPORT" , "QUIZ"       , "KNOWLEDGE",
+      "INTEREEST", "RELATING", "NEEDS"      , "Q_A",
+      "ADMIN_ENROLL", "ROOM", "LOCATION", "RECOMMEND"),
+    Subject = c(
+      "Before"   , "After"   , 
+      "What is BI?", "Getting Help", "Tool training",
+      "Teaching" , "Handouts", "Discussions",
+      "Exercises", "Support" , "Quiz", "Knowledge",
+      "Motivating", "Relating", "Needs", "Questions & Answers",
+      "Enrollment", "Room", "Location", "Recommend?")) 
+
+dtRATING <- 
+  dtEVAL[TOPIC != "ROLE" & SUB != "COMMENT" & !is.na(RATING)] %>%
+  .[, RATING := as.integer(RATING)]  %>%
+  dtLabels[., on = .(SUB)]
+
+caption <- "(based on 12 forms)"
 ```
 
 
@@ -66,16 +126,163 @@ dtKEY <-
 ```{r Transform}
 
 dtAPOLLO <- 
-  fGetSAPUsers(pType = "B") %>%
+  fGetSAPUsers(pType = "B")           %>%
   .[substr(CLASS, 1, 2) == "DE" & 
       USTYP             == "A"  &
-      USR_GLTGB          > today()]
+      USR_GLTGB          > today()]   %>%
+  dtKEY[., on = .(BNAME)]             %>%
+  AGR_USERS[., on = .(SYSTID, 
+                      CLIENT, 
+                      UNAME = BNAME)]
+  
 ```
 
 # Visualize
 
 ```{r Visualize}
-fOpen_in_Excel(dtUSR, pFN = "APOLLO_USER.csv")
+vrecommend <- c("Yes", "No", "other") 
+cols <- c("green", "red", "gray")
+names(cols) <- vrecommend
+
+dtAVG <- 
+  dtRATING[!is.na(RATING), .(average = mean(RATING)), 
+           by = .(TOPIC, Subject)] %>%
+  .[, average := round(average, 1)]
+
+dtFINAL <- 
+  dtRATING[TOPIC == "FINAL"]         %>%
+  .[, Recommend := as.factor(RATING)]  
+
+levels(dtFINAL$Recommend) <- vrecommend
+
+ggFINAL <- 
+  ggplot(
+    data    = dtFINAL,
+    mapping = aes(x = Recommend))  +
+  geom_bar(aes(fill = Recommend)) +
+  scale_fill_manual(
+    values = cols,
+    labels = vrecommend) +
+  labs(caption = caption)               
+
+ggFINAL
+
+# dtTOPIC <- 
+  # dtRATING[TOPIC != "FINAL" & TOPIC == "SKILLS"]  %>%
+  # dcast.data.table(
+  #   data          = .,
+  #   formula       =  FORM + TOPIC + QUESTION ~SUB,
+  #   fun.aggregate = sum,
+  #   value.var     = "RATING")
+  # 
+
+ggSKILLS <- 
+  ggplot(
+    data = dtRATING[TOPIC == "SKILLS"],
+    mapping = aes(x = SUB, y = RATING)) + 
+  geom_violin(aes(colour = SUB, fill = SUB), width = 2,
+              adjust = 0.25, trim = FALSE)            +
+  geom_jitter(colour = "red", 
+              height = 0, width = 0.2 )  +
+  coord_flip()                          +
+  labs(title = "Skills")                +
+  labs(y     = "Rating")                +
+  labs(x     = "Training")              +
+  labs(caption = caption)               +
+  scale_y_continuous(breaks = 1:5 , limits = c(1, 5)) +
+  scale_colour_discrete(guide = FALSE)    +
+  scale_fill_manual(
+    values = c(BEFORE = "red", AFTER = "green" ),
+    labels = c("BEFORE","AFTER"), 
+    guide = FALSE) 
+
+ggSKILLS
+
+ggTRAINER <- 
+  ggplot(
+    data = dtRATING[TOPIC == "TRAINER" & !is.na(RATING)],
+    mapping = aes(x = Subject, y = RATING)) + 
+  geom_violin(aes(colour = SUB, fill = SUB), width = 2,
+              adjust = 0.25, trim = FALSE)            +
+  geom_jitter(colour = "red", 
+              height = 0, width = 0.2 )  +
+  coord_flip()                          +
+  labs(title = "Trainer")               +
+  labs(y     = "Rating")                +
+  labs(x     = "Training")              +
+  labs(caption = caption)               +
+  scale_y_continuous(breaks = 1:5 , limits = c(1, 5)) +
+  scale_colour_discrete(guide = FALSE)    +
+  scale_fill_discrete(guide = FALSE) 
+
+ggTRAINER
+# ggsave(ggTRAINER, filename = "trainer.png", device = "png")
+  
+
+ggRELEVANCE <- 
+  ggplot(
+    data = dtRATING[TOPIC == "RELEVANCE" & !is.na(RATING)],
+    mapping = aes(x = Subject, y = RATING)) + 
+  geom_violin(aes(colour = SUB, fill = SUB), width = 2,
+              adjust = 0.05, trim = FALSE)            +
+  geom_jitter(colour = "red", 
+              height = 0, width = 0.2 )  +
+  coord_flip()                          +
+  labs(title = "RELEVANCE")               +
+  labs(y     = "Rating")                +
+  labs(x     = "Training")              +
+  labs(caption = caption)               +
+  scale_y_continuous(breaks = 1:5 , limits = c(1, 5)) +
+  scale_colour_discrete(guide = FALSE)    +
+  scale_fill_discrete(guide = FALSE) 
+
+ggRELEVANCE
+
+ggMETHODS <- 
+  ggplot(
+    data = dtRATING[TOPIC == "METHODS" & !is.na(RATING)],
+    mapping = aes(x = Subject, y = RATING)) + 
+  geom_violin(aes(colour = SUB, fill = SUB), width = 2,
+              adjust = 0.5, trim = FALSE)            +
+  geom_jitter(colour = "red", 
+              height = 0, width = 0.2 )  +
+  coord_flip()                          +
+  labs(title = "METHODS")               +
+  labs(y     = "Rating")                +
+  labs(x     = "Training")              +
+  labs(caption = caption)               +
+  scale_y_continuous(breaks = 1:5 , limits = c(1, 5)) +
+  scale_colour_discrete(guide = FALSE)    +
+  scale_fill_discrete(guide = FALSE) 
+
+ggMETHODS
+
+ggADMIN <- 
+  ggplot(
+    data = dtRATING[TOPIC == "ADMIN" & !is.na(RATING)],
+    mapping = aes(x = Subject, y = RATING)) + 
+  geom_violin(aes(colour = SUB, fill = SUB), width = 2,
+              adjust = 0.25, trim = FALSE)            +
+  geom_jitter(colour = "red", 
+              height = 0, width = 0.2 )  +
+  coord_flip()                          +
+  labs(title = "ADMIN")               +
+  labs(y     = "Rating")                +
+  labs(x     = "Training")              +
+  labs(caption = caption)               +
+  scale_y_continuous(breaks = 1:5 , limits = c(1, 5)) +
+  scale_colour_discrete(guide = FALSE)    +
+  scale_fill_discrete(guide = FALSE) 
+
+ggADMIN
+
+fOpen_in_Excel(
+  dtAPOLLO[SYSTID == "BP1" & TRAIN == "Y"], 
+  pFN = "APOLLO_USER.csv")
+
+fOpen_in_Excel(
+  dtKEY, 
+  pFN = "APOLLO_TRN.csv")
 ```
 
 # Model

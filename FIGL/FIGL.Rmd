@@ -1,0 +1,159 @@
+---
+title   : ""
+subtitle: ""
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+# Objective
+
+
+```{r setup}
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS   <- file.path("~", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+fCheck_FIGL <- 
+  function(pDOCNR, pRBUKRS, pRYEAR) {
+    fRead_and_Union(
+      pSIDCLNT = "RP1300",
+      pTable   = "FAGLFLEXA",
+      pOptions = list(
+        "RCLNT  = '300'"                 , "AND",
+        paste0("RYEAR  = '", pRYEAR, "'"), "AND",
+        paste0("DOCNR  = '", pDOCNR, "'"), "AND",
+        "RLDNR  = '0L'"                  , "AND",
+        paste0("RBUKRS = '", pRBUKRS, "'")),
+      pFields = list("RCLNT", "RYEAR", "DOCNR", "RLDNR", "RBUKRS", "DOCLN"))
+  }
+
+dtCHK <- 
+  read_excel(
+    path = file.path("..", "10_RawData", "FIGL", 
+                  #  "17_04_2018_Item Level Details DE12.xlsx"),
+                     "17_04_2018_Item Level Details GV03.xlsx"),
+    col_types = "text") %>%
+  as.data.table()       %>%
+  .[ , .N, by = .(AC_DOC_NR, COMP_CODE, substring(FISCPER, 1, 4))] %T>%
+  setnames(c("pDOCNR", "pRBUKRS", "pRYEAR", "N")) %>%
+  .[, N := NULL]
+
+dtCHK <- 
+  read_excel(
+    path = file.path("..", "10_RawData", "FIGL", 
+                     #"Actual postings_17_04_18_DE12.xlsx"),
+                     "Actual postings_17_04_18_GV03.xlsx"),                     
+    col_types = "text") %>%
+  as.data.table()       %>%
+  setnames(
+    c("Document Number", "Company Code", "Fiscal Year"),
+    c("pDOCNR", "pRBUKRS", "pRYEAR")) %>%  
+  .[, .N, by = .(pRBUKRS, pDOCNR, pRYEAR)] %>%
+  .[, N := NULL]
+
+dtRESULT <- 
+  dtCHK             %>%
+  pmap(fCheck_FIGL) %>%
+  rbindlist()
+
+----
+
+pTAB <- "/BIC/AG1GLPD522"
+dtG1GLPD522 <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = pTAB,
+    pOptions = list(
+      "FISCPER    > '2017016'   ", "AND",
+      "AC_DOC_NR  = '4903390850'", "AND",
+      "AC_LEDGER  = '0L'        ", "AND",
+      "COMP_CODE  = 'DE12'"),
+    pFields = list("AC_DOC_NR" , "AC_DOC_LN" , "COMP_CODE" , "FISCPER",
+                   "AC_DOC_TYP", "GL_ACCOUNT", "PROFIT_CTR", 
+                   "FI_AWTYP"  , "RSPL_CRUSR", "/BIC/G1TMSTMP1",
+                   "/BIC/G1GLACOCD"))
+
+
+
+```
+
+
+
+
+
+
+# Tidy
+
+```{r Tidy}
+
+```
+
+# Transform
+
+```{r Transform}
+
+```
+
+# Visualize
+
+```{r Visualize}
+
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+
+pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "FileName.csv"))
+
+write.table(
+  pOBJ,
+  file = pFFN, 
+  sep = ";", row.names = FALSE, col.names = TRUE)
+shell.exec(pFFN)
+```
+
+

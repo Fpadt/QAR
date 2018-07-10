@@ -1,0 +1,171 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "HANA Memory"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+# Objective
+
+```{r setup}
+# # Cleanse memory
+# rm(list = ls())
+# gc()
+
+# parameters Settings
+pXLSX    <- "" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+BIDOCsrc <- normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS   <- file.path("~", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+pTable <- "/BIC/AG1MNPD0100"
+
+dtMEM <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = pTable,
+    pFields = list(
+      "CALDAY"   , "TIME", 
+      "/BIC/G1PHYSMEM", "/BIC/G1ALLOC", 
+      "/BIC/G1FREEMEM", "/BIC/G1USEDMEM", 
+      "/BIC/G1ROWMEM",  "/BIC/G1RCOLMEM",  "/BIC/G1CODEMEM" ))      %T>%
+  setnames(gsub(pattern = "/BIC/", replacement = "", x = names(.))) %>%
+  .[, `:=`(
+    TIME     = str_pad(
+      string = TIME, width = 6, pad = "0", side = "left"))]         %T>%
+  setkey(CALDAY, TIME)
+
+```
+
+
+# Tidy
+
+```{r Tidy}
+dtMEM[, DTTM := make_datetime(
+  as.integer(substr(CALDAY, 1, 4)), 
+  as.integer(substr(CALDAY, 5, 6)),
+  as.integer(substr(CALDAY, 7, 8)),
+  as.integer(substr(TIME, 1, 2)),
+  as.integer(substr(TIME, 3, 4)),
+  as.integer(substr(TIME, 5, 6)))]
+
+dtMEM[, `:=`(
+  G1PHYSMEM = as.double(G1PHYSMEM) * 1024,
+  G1ALLOC   = as.double(G1ALLOC)   * 1024,
+  G1FREEMEM = as.double(G1FREEMEM) * 1024,
+  G1USEDMEM = as.double(G1USEDMEM),
+  G1ROWMEM  = as.double(G1ROWMEM),
+  G1RCOLMEM = as.double(G1RCOLMEM),
+  G1CODEMEM = as.double(G1CODEMEM)) 
+  ]
+```
+
+# Transform
+
+```{r Transform}
+
+
+```
+
+# Visualize
+
+```{r Visualize}
+dtMEM_lng <- 
+  melt.data.table(
+    data            = dtMEM,
+    id.vars         = "DTTM",
+    measure.vars    = c("G1PHYSMEM", "G1ALLOC" , "G1FREEMEM",
+                        "G1USEDMEM", "G1ROWMEM", "G1RCOLMEM", "G1CODEMEM"),
+    variable.name   = "TYPE",
+    value.name      = "SIZE",
+    variable.factor = FALSE,
+    value.factor    = FALSE
+  ) 
+
+dtMEM %>% 
+  ggplot(mapping = aes(x = DTTM)) + 
+  geom_ribbon(mapping = aes(ymin = 0,         ymax = G1CODEMEM), 
+              stat = "identity", position = "identity", color = "green", fill = "green")   +
+  geom_ribbon(mapping = aes(ymin = G1CODEMEM, ymax = G1ROWMEM), 
+              stat = "identity", position = "identity", color = "yellow", fill = "yellow") +
+  geom_ribbon(mapping = aes(ymin = (G1CODEMEM + G1ROWMEM), ymax = G1RCOLMEM), 
+              stat = "identity", position = "identity", color = "orange", fill = "orange") +
+  geom_ribbon(mapping = aes(ymin = (G1CODEMEM + G1ROWMEM + G1RCOLMEM), ymax = G1USEDMEM), 
+              stat = "identity", position = "identity", color = "grey", fill = "grey")     +
+  geom_ribbon(mapping = aes(ymin = (G1USEDMEM), ymax = G1ALLOC), 
+              stat = "identity", position = "identity", color = "white", fill = "white")   +
+  geom_line(mapping = aes(y = G1PHYSMEM), color = "black", size = 1.5) +
+  geom_line(mapping = aes(y = G1ALLOC)  , color = "red"  , size = 1.5) +  
+  geom_line(mapping = aes(y = G1USEDMEM), color = "grey" , size = 0.01)  
+
+dtMEM %>% 
+  ggplot(mapping = aes(x = DTTM)) + 
+  geom_point(mapping = aes(y = G1ALLOC)  , color = "grey") +
+  geom_point(mapping = aes(y = G1FREEMEM), color = "green", size = 0.5, alpha = 0.05)
+
+dtgg <- 
+  ggplot(data = dtMEM_lng) + 
+  geom_point(mapping = aes(x = DTTM, y = SIZE), size = 0.3, alpha = 0.5, color = "blue") +
+  facet_grid(TYPE~.) 
+
+  ggsave(dtgg,filename =  "Hanamem.png", device = "png" )
+
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+
+pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "FileName.csv"))
+
+write.table(
+  pOBJ,
+  file = pFFN, 
+  sep = ";", row.names = FALSE, col.names = TRUE)
+shell.exec(pFFN)
+
+fOpen_in_Excel(
+  pDT   = dtMEM,
+  pPath = file.path("c:", "c-temp"),
+  pFN   = "HMEM.CSV" 
+)
+```
+
+

@@ -1,0 +1,219 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "EMERALD Mapping"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)
+
+# Objective
+
+
+```{r setup}
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# parameters Settings
+BIDOCsrc <- 
+  normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS <- 
+  file.path(
+    "~", "RW", "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+
+RSDSSEGFD <- 
+  fRead_and_Union(
+    pSIDCLNT = c("BP1300"), 
+    pTable   = "RSDSSEGFD",
+    pOptions = list("OBJVERS = 'A'"),
+    pFields  = list("DATASOURCE", "LOGSYS", "POSIT", "FIELDNM", "DATATYPE"))  
+
+ZFIAR_ADM <- 
+  fRead_and_Union(
+    pSIDCLNT = c("RP1300"), 
+    pTable   = "ZFIAR_ADM")
+
+# Complex Mapping 0 Records
+ZFIAR_ACM <- 
+  fReadSAPTable(
+    pSystID  = "RP1", 
+    pClient  = "300",
+    pTable   = "ZFIAR_ACM")
+
+ZFIAR_CC <- 
+  fReadSAPTable(
+  pSystID = "RP1", 
+  pClient = "300",
+  pTable = "ZFIAR_CC")
+
+GL_ACCOUNT <- 
+  fRead_and_Union(
+    pSIDCLNT = c("BP1300"), 
+    pTable = "/BI0/PGL_ACCOUNT",
+    pOptions = list("CHRT_ACCTS = 'GV00'")) %T>%
+  setnames(gsub("/BIC/", "", names(.))) 
+
+SKA1 <- 
+    fRead_and_Union(
+    pSIDCLNT = c("RP1300"), 
+    pTable   = "SKA1",
+    pOptions = list("KTOPL = 'GV00'"),
+    pFields  = list("KTOPL", "SAKNR", "BILKT", "GVTYP", "VBUND", "XBILK"    , "SAKAN", "ERDAT", "ERNAM", 
+                    "KTOKS", "XLOEV", "XSPEA", "XSPEB", "FUNC_AREA", "MUSTR")) %>%
+  .[, `:=`( SYSTID = NULL, CLIENT = NULL)]
+     
+
+```
+
+# Tidy
+
+```{r Tidy}
+
+```
+
+# Transform
+
+```{r Transform}
+dtRSDSSEGFD <- 
+  copy(RSDSSEGFD) %>%
+  .[DATASOURCE == "0GL_ACCOUNT_ATTR" &
+    LOGSYS     == "RP1CLNT300"]    %>%
+  .[, POSIT := as.integer(POSIT)] %T>%
+  setkey(POSIT)
+
+ZFIAR_ADM[, MANDT := NULL]
+
+dtGL_ACCOUNT <- 
+  copy(GL_ACCOUNT)                                %>%
+  .[, `:=`( 
+    CHANGED    = NULL, GLACCEXT   = NULL, 
+    SEM_POSIT  = NULL, OBJVERS    = NULL, 
+    SOURSYSTEM = NULL, LOGSYS     = NULL)]        %>%
+  .[GL_ACCOUNT != 0]                              %>%
+  .[, `:=`(
+    FD = substr(G1DACCNT, 1, 1),
+    FC = substr(G1CACCNT, 1, 1))]                 %>%
+  SKA1[., on = .(SAKNR = GL_ACCOUNT),
+    nomatch = NA]
+
+# not in RP1    
+dtTMP01 <- 
+  dtGL_ACCOUNT[is.na(KTOPL)]
+
+dtGL_ACCOUNT <- 
+  dtGL_ACCOUNT[!is.na(KTOPL)]
+
+
+dtT <- 
+  unique(dtGL_ACCOUNT[, .(G1DACCNT, G1CACCNT)])   %>%
+  .[, DP := duplicated(., by = "G1DACCNT")]       %>%
+  .[, DA := any(DP)     , by = "G1DACCNT"]        %>%
+  .[, CP := duplicated(., by = "G1CACCNT")]       %>%
+  .[, CA := any(CP)     , by = "G1CACCNT"]        %>%
+  .[, EQ := (G1DACCNT == G1CACCNT)]             
+
+View(dtT[EQ == FALSE])
+
+flds <- 
+  c("EMERALD_POSITIVE", "EMERALD_NEGATIVE" , "EMERALD_PRODUCT_GROUP", 
+    "MAPPING_FLAG"    , "EMERALD_S_ACCOUNT", "EMERALD_MA_ACCOUNT"   , 
+    "INTERCOMPANY_PARTNER_REQ" )
+
+dtMAP_ADM_GL <-  
+  copy(GL_ACCOUNT)                               %T>%
+  setnames(
+    c("/BIC/G1CACCNT", "/BIC/G1DACCNT", "/BIC/G1PRDCOD", "/BIC/G1MAPFLG", 
+      "/BIC/G1SACCNT", "/BIC/G1MACCNT", "/BIC/G1INTCREQ"),   
+    flds)
+
+dtMAP_ADM_GL <- 
+  dtMAP_ADM_GL[, names(ZFIAR_ADM), with = FALSE] %T>%
+  setcolorder(names(ZFIAR_ADM)) 
+
+dtCOMP <- 
+  rbindlist(
+    list(dtMAP_ADM_GL, ZFIAR_ADM))               %T>%
+  setkey("GL_ACCOUNT")                            %>%
+  .[, DUP := duplicated(., by = flds)]            %>%
+  .[, DPA := any(DUP)    , by = flds]
+
+compflds <- setdiff(names(ZFIAR_ADM), c("SYSTID", "CLIENT", "MANDT"))
+ZFIAR_ADM_COMPARE <- 
+  copy(ZFIAR_ADM)                                %T>%
+  setkey("GL_ACCOUNT")                            %>%
+  .[, DUP := duplicated(., by = compflds)]        %>%
+  .[, DPA := any(DUP)    , by = compflds] 
+
+```
+
+# Visualize
+
+```{r Visualize}
+
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+
+fOpen_in_Excel(
+  pDT =  dtGL_ACCOUNT, 
+  pFN = "dtGL_ACCOUNT.csv")
+
+fOpen_in_Excel(
+  pDT =  dtCOMP[DPA == FALSE], 
+  pFN = "ADM_Compare.csv")
+
+fOpen_in_Excel(
+  pDT =  ZFIAR_ADM_COMPARE[DPA == FALSE], 
+  pFN = "ZFIAR_ADM_COMPARE.csv")
+
+fOpen_in_Excel(
+  pDT =  dtTMP01, 
+  pFN = "not_in_RP1.csv")
+
+fOpen_in_Excel(
+  pDT =  ZFIAR_ADM, 
+  pFN = "ZFIAR_ADM.csv")
+
+```
+
+

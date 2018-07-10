@@ -11,7 +11,7 @@
 
 <meta name="author" content="F.J. Padt" />
 
-<meta name="date" content="2018-06-16" />
+<meta name="date" content="2018-07-05" />
 
 <title>Quality Assurance Report</title>
 
@@ -172,7 +172,7 @@ $(document).ready(function () {
 <h1 class="title toc-ignore">Quality Assurance Report</h1>
 <h3 class="subtitle"><em>CD and Transport Check</em></h3>
 <h4 class="author"><em>F.J. Padt</em></h4>
-<h4 class="date"><em>June 16, 2018</em></h4>
+<h4 class="date"><em>July 05, 2018</em></h4>
 
 </div>
 
@@ -199,6 +199,92 @@ $(document).ready(function () {
 <h1>Objective</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBDbGVhbnNlIG1lbW9yeVxucm0obGlzdCA9IGxzKCkpXG5nYygpXG5gYGAifQ== -->
+<pre class="r"><code># Cleanse memory
+rm(list = ls())
+gc()</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgICAgICAgdXNlZCAoTWIpIGdjIHRyaWdnZXIgKE1iKSBtYXggdXNlZCAoTWIpXG5OY2VsbHMgNDUwODM4IDI0LjEgICAgIDk4NDMwMCA1Mi42ICAgNjA3NjE3IDMyLjVcblZjZWxscyA4MTM1NjkgIDYuMyAgICA4Mzg4NjA4IDY0LjAgIDE1OTI2NDkgMTIuMlxuIn0= -->
+<pre><code>         used (Mb) gc trigger (Mb) max used (Mb)
+Ncells 450838 24.1     984300 52.6   607617 32.5
+Vcells 813569  6.3    8388608 64.0  1592649 12.2</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBwYXJhbWV0ZXJzIFNldHRpbmdzXG5CSURPQ3NyYyA8LSBcbiAgbm9ybWFsaXplUGF0aChcIn4vLi4vLi4vR3JhbmRWaXNpb24vU0FQIEJJIGRvY3VtZW50YXRpb24gLSBEb2N1bWVudHMvYmktZG9jL3NyYy9cIilcbiMgS25pdFIgU2V0VXAgbG9jYXRpb25cbktTIDwtIFxuICBmaWxlLnBhdGgoXG4gICAgXCJ+XCIsIFwiUldcIiwgXCJRQVJcIiwgXCIwMF9SUHJvalwiLCBcIjAwX0dsb2JhbFwiLCBcIktuaXRSX1NldFVwLlJcIilcbiMgTG9hZCBmdW5jdGlvbnNcbmludmlzaWJsZShzb3VyY2UoS1MpKVxuYGBgIn0= -->
+<pre class="r"><code># parameters Settings
+BIDOCsrc &lt;- 
+  normalizePath(&quot;~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/&quot;)
+# KnitR SetUp location
+KS &lt;- 
+  file.path(
+    &quot;~&quot;, &quot;RW&quot;, &quot;QAR&quot;, &quot;00_RProj&quot;, &quot;00_Global&quot;, &quot;KnitR_SetUp.R&quot;)
+# Load functions
+invisible(source(KS))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiZGF0YS50YWJsZSAxLjExLjQgIExhdGVzdCBuZXdzOiBodHRwOi8vci1kYXRhdGFibGUuY29tXG5mc3QgcGFja2FnZSB2MC44LjhcbihPcGVuTVAgZGV0ZWN0ZWQsIHVzaW5nIDQgdGhyZWFkcylcblx1MDAxYlszMG0tLSBcdTAwMWJbMW1BdHRhY2hpbmcgcGFja2FnZXNcdTAwMWJbMjJtIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSB0aWR5dmVyc2UgMS4yLjEgLS1cdTAwMWJbMzltXG5cdTAwMWJbMzBtXHUwMDFiWzMybXZcdTAwMWJbMzBtIFx1MDAxYlszNG10aWJibGUgXHUwMDFiWzMwbSAxLjQuMiAgICAgXHUwMDFiWzMybXZcdTAwMWJbMzBtIFx1MDAxYlszNG1kcGx5ciAgXHUwMDFiWzMwbSAwLjcuNVxuXHUwMDFiWzMybXZcdTAwMWJbMzBtIFx1MDAxYlszNG1wdXJyciAgXHUwMDFiWzMwbSAwLjIuNSAgICAgXHUwMDFiWzMybXZcdTAwMWJbMzBtIFx1MDAxYlszNG1mb3JjYXRzXHUwMDFiWzMwbSAwLjMuMFx1MDAxYlszOW1cblx1MDAxYlszMG0tLSBcdTAwMWJbMW1Db25mbGljdHNcdTAwMWJbMjJtIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSB0aWR5dmVyc2VfY29uZmxpY3RzKCkgLS1cblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtbHVicmlkYXRlXHUwMDFiWzMwbTo6XHUwMDFiWzMybWFzLmRpZmZ0aW1lKClcdTAwMWJbMzBtIG1hc2tzIFx1MDAxYlszNG1iYXNlXHUwMDFiWzMwbTo6YXMuZGlmZnRpbWUoKVxuXHUwMDFiWzMxbXhcdTAwMWJbMzBtIFx1MDAxYlszNG1kcGx5clx1MDAxYlszMG06Olx1MDAxYlszMm1iZXR3ZWVuKClcdTAwMWJbMzBtICAgICAgICAgbWFza3MgXHUwMDFiWzM0bWRhdGEudGFibGVcdTAwMWJbMzBtOjpiZXR3ZWVuKClcblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtUkN1cmxcdTAwMWJbMzBtOjpcdTAwMWJbMzJtY29tcGxldGUoKVx1MDAxYlszMG0gICAgICAgIG1hc2tzIFx1MDAxYlszNG10aWR5clx1MDAxYlszMG06OmNvbXBsZXRlKClcblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtbHVicmlkYXRlXHUwMDFiWzMwbTo6XHUwMDFiWzMybWRhdGUoKVx1MDAxYlszMG0gICAgICAgIG1hc2tzIFx1MDAxYlszNG1iYXNlXHUwMDFiWzMwbTo6ZGF0ZSgpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bW1hZ3JpdHRyXHUwMDFiWzMwbTo6XHUwMDFiWzMybWV4dHJhY3QoKVx1MDAxYlszMG0gICAgICBtYXNrcyBcdTAwMWJbMzRtdGlkeXJcdTAwMWJbMzBtOjpleHRyYWN0KClcblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtZHBseXJcdTAwMWJbMzBtOjpcdTAwMWJbMzJtZmlsdGVyKClcdTAwMWJbMzBtICAgICAgICAgIG1hc2tzIFx1MDAxYlszNG1zdGF0c1x1MDAxYlszMG06OmZpbHRlcigpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bWRwbHlyXHUwMDFiWzMwbTo6XHUwMDFiWzMybWZpcnN0KClcdTAwMWJbMzBtICAgICAgICAgICBtYXNrcyBcdTAwMWJbMzRtZGF0YS50YWJsZVx1MDAxYlszMG06OmZpcnN0KClcblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtbHVicmlkYXRlXHUwMDFiWzMwbTo6XHUwMDFiWzMybWhvdXIoKVx1MDAxYlszMG0gICAgICAgIG1hc2tzIFx1MDAxYlszNG1kYXRhLnRhYmxlXHUwMDFiWzMwbTo6aG91cigpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bWx1YnJpZGF0ZVx1MDAxYlszMG06Olx1MDAxYlszMm1pbnRlcnNlY3QoKVx1MDAxYlszMG0gICBtYXNrcyBcdTAwMWJbMzRtYmFzZVx1MDAxYlszMG06OmludGVyc2VjdCgpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bWx1YnJpZGF0ZVx1MDAxYlszMG06Olx1MDAxYlszMm1pc293ZWVrKClcdTAwMWJbMzBtICAgICBtYXNrcyBcdTAwMWJbMzRtZGF0YS50YWJsZVx1MDAxYlszMG06Omlzb3dlZWsoKVxuXHUwMDFiWzMxbXhcdTAwMWJbMzBtIFx1MDAxYlszNG1kcGx5clx1MDAxYlszMG06Olx1MDAxYlszMm1sYWcoKVx1MDAxYlszMG0gICAgICAgICAgICAgbWFza3MgXHUwMDFiWzM0bXN0YXRzXHUwMDFiWzMwbTo6bGFnKClcblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtZHBseXJcdTAwMWJbMzBtOjpcdTAwMWJbMzJtbGFzdCgpXHUwMDFiWzMwbSAgICAgICAgICAgIG1hc2tzIFx1MDAxYlszNG1kYXRhLnRhYmxlXHUwMDFiWzMwbTo6bGFzdCgpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bWx1YnJpZGF0ZVx1MDAxYlszMG06Olx1MDAxYlszMm1tZGF5KClcdTAwMWJbMzBtICAgICAgICBtYXNrcyBcdTAwMWJbMzRtZGF0YS50YWJsZVx1MDAxYlszMG06Om1kYXkoKVxuXHUwMDFiWzMxbXhcdTAwMWJbMzBtIFx1MDAxYlszNG1sdWJyaWRhdGVcdTAwMWJbMzBtOjpcdTAwMWJbMzJtbWludXRlKClcdTAwMWJbMzBtICAgICAgbWFza3MgXHUwMDFiWzM0bWRhdGEudGFibGVcdTAwMWJbMzBtOjptaW51dGUoKVxuXHUwMDFiWzMxbXhcdTAwMWJbMzBtIFx1MDAxYlszNG1sdWJyaWRhdGVcdTAwMWJbMzBtOjpcdTAwMWJbMzJtbW9udGgoKVx1MDAxYlszMG0gICAgICAgbWFza3MgXHUwMDFiWzM0bWRhdGEudGFibGVcdTAwMWJbMzBtOjptb250aCgpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bWx1YnJpZGF0ZVx1MDAxYlszMG06Olx1MDAxYlszMm1xdWFydGVyKClcdTAwMWJbMzBtICAgICBtYXNrcyBcdTAwMWJbMzRtZGF0YS50YWJsZVx1MDAxYlszMG06OnF1YXJ0ZXIoKVxuXHUwMDFiWzMxbXhcdTAwMWJbMzBtIFx1MDAxYlszNG1sdWJyaWRhdGVcdTAwMWJbMzBtOjpcdTAwMWJbMzJtc2Vjb25kKClcdTAwMWJbMzBtICAgICAgbWFza3MgXHUwMDFiWzM0bWRhdGEudGFibGVcdTAwMWJbMzBtOjpzZWNvbmQoKVxuXHUwMDFiWzMxbXhcdTAwMWJbMzBtIFx1MDAxYlszNG1wdXJyclx1MDAxYlszMG06Olx1MDAxYlszMm1zZXRfbmFtZXMoKVx1MDAxYlszMG0gICAgICAgbWFza3MgXHUwMDFiWzM0bW1hZ3JpdHRyXHUwMDFiWzMwbTo6c2V0X25hbWVzKClcblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtbHVicmlkYXRlXHUwMDFiWzMwbTo6XHUwMDFiWzMybXNldGRpZmYoKVx1MDAxYlszMG0gICAgIG1hc2tzIFx1MDAxYlszNG1iYXNlXHUwMDFiWzMwbTo6c2V0ZGlmZigpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bXB1cnJyXHUwMDFiWzMwbTo6XHUwMDFiWzMybXRyYW5zcG9zZSgpXHUwMDFiWzMwbSAgICAgICBtYXNrcyBcdTAwMWJbMzRtZGF0YS50YWJsZVx1MDAxYlszMG06OnRyYW5zcG9zZSgpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bWx1YnJpZGF0ZVx1MDAxYlszMG06Olx1MDAxYlszMm11bmlvbigpXHUwMDFiWzMwbSAgICAgICBtYXNrcyBcdTAwMWJbMzRtYmFzZVx1MDAxYlszMG06OnVuaW9uKClcblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtbHVicmlkYXRlXHUwMDFiWzMwbTo6XHUwMDFiWzMybXdkYXkoKVx1MDAxYlszMG0gICAgICAgIG1hc2tzIFx1MDAxYlszNG1kYXRhLnRhYmxlXHUwMDFiWzMwbTo6d2RheSgpXG5cdTAwMWJbMzFteFx1MDAxYlszMG0gXHUwMDFiWzM0bWx1YnJpZGF0ZVx1MDAxYlszMG06Olx1MDAxYlszMm13ZWVrKClcdTAwMWJbMzBtICAgICAgICBtYXNrcyBcdTAwMWJbMzRtZGF0YS50YWJsZVx1MDAxYlszMG06OndlZWsoKVxuXHUwMDFiWzMxbXhcdTAwMWJbMzBtIFx1MDAxYlszNG1sdWJyaWRhdGVcdTAwMWJbMzBtOjpcdTAwMWJbMzJteWRheSgpXHUwMDFiWzMwbSAgICAgICAgbWFza3MgXHUwMDFiWzM0bWRhdGEudGFibGVcdTAwMWJbMzBtOjp5ZGF5KClcblx1MDAxYlszMW14XHUwMDFiWzMwbSBcdTAwMWJbMzRtbHVicmlkYXRlXHUwMDFiWzMwbTo6XHUwMDFiWzMybXllYXIoKVx1MDAxYlszMG0gICAgICAgIG1hc2tzIFx1MDAxYlszNG1kYXRhLnRhYmxlXHUwMDFiWzMwbTo6eWVhcigpXHUwMDFiWzM5bVxuXG5BdHRhY2hpbmcgcGFja2FnZTog46S847ixcmVzaGFwZeOkvOO4slxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDjpLzjuLFwYWNrYWdlOmRwbHly46S847iyOlxuXG4gICAgcmVuYW1lXG5cblRoZSBmb2xsb3dpbmcgb2JqZWN0IGlzIG1hc2tlZCBmcm9tIOOkvOO4sXBhY2thZ2U6bHVicmlkYXRl46S847iyOlxuXG4gICAgc3RhbXBcblxuVGhlIGZvbGxvd2luZyBvYmplY3RzIGFyZSBtYXNrZWQgZnJvbSDjpLzjuLFwYWNrYWdlOnRpZHly46S847iyOlxuXG4gICAgZXhwYW5kLCBzbWl0aHNcblxuVGhlIGZvbGxvd2luZyBvYmplY3RzIGFyZSBtYXNrZWQgZnJvbSDjpLzjuLFwYWNrYWdlOnJlc2hhcGUy46S847iyOlxuXG4gICAgY29sc3BsaXQsIG1lbHQsIHJlY2FzdFxuXG5UaGUgZm9sbG93aW5nIG9iamVjdCBpcyBtYXNrZWQgZnJvbSDjpLzjuLFwYWNrYWdlOmRhdGEudGFibGXjpLzjuLI6XG5cbiAgICBtZWx0XG4ifQ== -->
+<pre><code>data.table 1.11.4  Latest news: http://r-datatable.com
+fst package v0.8.8
+(OpenMP detected, using 4 threads)
+[30m-- [1mAttaching packages[22m --------------------------------------- tidyverse 1.2.1 --[39m
+[30m[32mv[30m [34mtibble [30m 1.4.2     [32mv[30m [34mdplyr  [30m 0.7.5
+[32mv[30m [34mpurrr  [30m 0.2.5     [32mv[30m [34mforcats[30m 0.3.0[39m
+[30m-- [1mConflicts[22m ------------------------------------------ tidyverse_conflicts() --
+[31mx[30m [34mlubridate[30m::[32mas.difftime()[30m masks [34mbase[30m::as.difftime()
+[31mx[30m [34mdplyr[30m::[32mbetween()[30m         masks [34mdata.table[30m::between()
+[31mx[30m [34mRCurl[30m::[32mcomplete()[30m        masks [34mtidyr[30m::complete()
+[31mx[30m [34mlubridate[30m::[32mdate()[30m        masks [34mbase[30m::date()
+[31mx[30m [34mmagrittr[30m::[32mextract()[30m      masks [34mtidyr[30m::extract()
+[31mx[30m [34mdplyr[30m::[32mfilter()[30m          masks [34mstats[30m::filter()
+[31mx[30m [34mdplyr[30m::[32mfirst()[30m           masks [34mdata.table[30m::first()
+[31mx[30m [34mlubridate[30m::[32mhour()[30m        masks [34mdata.table[30m::hour()
+[31mx[30m [34mlubridate[30m::[32mintersect()[30m   masks [34mbase[30m::intersect()
+[31mx[30m [34mlubridate[30m::[32misoweek()[30m     masks [34mdata.table[30m::isoweek()
+[31mx[30m [34mdplyr[30m::[32mlag()[30m             masks [34mstats[30m::lag()
+[31mx[30m [34mdplyr[30m::[32mlast()[30m            masks [34mdata.table[30m::last()
+[31mx[30m [34mlubridate[30m::[32mmday()[30m        masks [34mdata.table[30m::mday()
+[31mx[30m [34mlubridate[30m::[32mminute()[30m      masks [34mdata.table[30m::minute()
+[31mx[30m [34mlubridate[30m::[32mmonth()[30m       masks [34mdata.table[30m::month()
+[31mx[30m [34mlubridate[30m::[32mquarter()[30m     masks [34mdata.table[30m::quarter()
+[31mx[30m [34mlubridate[30m::[32msecond()[30m      masks [34mdata.table[30m::second()
+[31mx[30m [34mpurrr[30m::[32mset_names()[30m       masks [34mmagrittr[30m::set_names()
+[31mx[30m [34mlubridate[30m::[32msetdiff()[30m     masks [34mbase[30m::setdiff()
+[31mx[30m [34mpurrr[30m::[32mtranspose()[30m       masks [34mdata.table[30m::transpose()
+[31mx[30m [34mlubridate[30m::[32munion()[30m       masks [34mbase[30m::union()
+[31mx[30m [34mlubridate[30m::[32mwday()[30m        masks [34mdata.table[30m::wday()
+[31mx[30m [34mlubridate[30m::[32mweek()[30m        masks [34mdata.table[30m::week()
+[31mx[30m [34mlubridate[30m::[32myday()[30m        masks [34mdata.table[30m::yday()
+[31mx[30m [34mlubridate[30m::[32myear()[30m        masks [34mdata.table[30m::year()[39m
+
+Attaching package: 㤼㸱reshape㤼㸲
+
+The following object is masked from 㤼㸱package:dplyr㤼㸲:
+
+    rename
+
+The following object is masked from 㤼㸱package:lubridate㤼㸲:
+
+    stamp
+
+The following objects are masked from 㤼㸱package:tidyr㤼㸲:
+
+    expand, smiths
+
+The following objects are masked from 㤼㸱package:reshape2㤼㸲:
+
+    colsplit, melt, recast
+
+The following object is masked from 㤼㸱package:data.table㤼㸲:
+
+    melt</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBGVFAgLSBDb25uZWN0aW9uIHRvIEdWIEZpbGVTZXJ2ZXJcbiMgQ29uc3RhbnRzXG4jIGZvbGRlciAgPC0gXCIvYmkvaWIvbWRcIiAgICAgICAgICBcbiMgbGZvbGRlciA8LSBmaWxlLnBhdGgoXCIuLlwiLCBmb2xkZXIpICAjIGxvY2FsIGZvbGRlclxuIyBmc3VybCAgIDwtIHBhc3RlMChcbiMgICBcImZ0cDovL2ZzLmdyYW5kdmlzaW9uLmNvbS9weXRoaWEvXCIsIGZvbGRlcilcbiMgdXNlcnB3ZCA8LSBwYXN0ZShcImZ0cGJwMVwiLCBwYXJhbXMkcGFzc3dvcmQsIHNlcCA9IFwiOlwiKVxuYGBgIn0= -->
+<pre class="r"><code># FTP - Connection to GV FileServer
+# Constants
+# folder  &lt;- &quot;/bi/ib/md&quot;          
+# lfolder &lt;- file.path(&quot;..&quot;, folder)  # local folder
+# fsurl   &lt;- paste0(
+#   &quot;ftp://fs.grandvision.com/pythia/&quot;, folder)
+# userpwd &lt;- paste(&quot;ftpbp1&quot;, params$password, sep = &quot;:&quot;)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -206,6 +292,48 @@ $(document).ready(function () {
 <h1>Data Import</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucENEIDwtIFwiMjIwMDAwMzQ5OVwiXG5wVFAgPC0gXCJCRDFLOTE2NzMwXCIgXG5wVEMgPC0gXCJCRDFLOTE2NzMyXCJcbnBGaWxlTmFtZSA8LSBcbiAgcGFzdGUwKHBDRCwgXCItXCIsIHBUUCwgXCIuY3N2XCIpXG5wT3B0aW9ucyA8LSBcbiAgcGFzdGUwKFwiVFJLT1JSID0gJ1wiLCBwVFAsIFwiJ1wiKVxuaWYgKHBUQyAhPSBcIlwiKSB7XG4gIHBPcHRpb25zIDwtIFxuICAgIHBhc3RlMChwT3B0aW9ucywgXCIgT1IgXCIsXG4gICAgICAgICAgIFwiVFJLT1JSID0gJ1wiLCBwVEMsIFwiJ1wiKVxufVxuaWYgKCFleGlzdHMoXCJFMDcwXCIpKSB7XG4gIEUwNzAgPC1cbiAgICBmUmVhZF9hbmRfVW5pb24oXG4gICAgICBwU0lEQ0xOVCA9IFwiQkQxMTAwXCIsXG4gICAgICBwVGFibGUgICA9IFwiRTA3MFwiKX1cbiMgc3RhcnRUUiA8LSBcbiAgIyBFMDcwW0FTNERBVEUgPiBcIjIwMTgwMTAxXCIgJiBzdWJzdHIoVFJLT1JSLCAxLDMpID09IFwiQkQxXCIsIFxuICAjICAgICAgbWluKFRSS09SUildXG5pZiAoIWV4aXN0cyhcIkUwN1hcIikpIHtcbiAgRTA3MSA8LVxuICAgIGZSZWFkX2FuZF9VbmlvbihcbiAgICAgIHBTSURDTE5UID0gXCJCRDExMDBcIixcbiAgICAgIHBUYWJsZSAgID0gXCJFMDcxXCIsXG4gICAgICBwT3B0aW9ucyA9IGxpc3QocE9wdGlvbnMpKSAlPiVcbiAgICAuWywgQVM0UE9TIDo9IE5VTExdICAgICAgICAgICU+JVxuICAgIHVuaXF1ZSgpfVxuaWYgKCFleGlzdHMoXCJSU1pDT01QRElSXCIpKSB7XG4gIFJTWkNPTVBESVIgPC1cbiAgICBmUmVhZF9hbmRfVW5pb24oXG4gICAgICBwU0lEQ0xOVCA9IGMoXCJCRDExMDBcIiwgXCJCVTEzMDBcIiwgXCJCUDEzMDBcIiksXG4gICAgICBwVGFibGUgICA9IFwiUlNaQ09NUERJUlwiLFxuICAgICAgcE9wdGlvbnMgPSBsaXN0KFwiT0JKVkVSUyA9ICdBJ1wiKSl9XG5pZiAoIWV4aXN0cyhcIlJTUlJFUERJUlwiKSkge1xuICBSU1JSRVBESVIgPC1cbiAgICBmUmVhZF9hbmRfVW5pb24oXG4gICAgICBwU0lEQ0xOVCA9IGMoXCJCRDExMDBcIiwgXCJCVTEzMDBcIiwgXCJCUDEzMDBcIiksXG4gICAgICBwVGFibGUgICA9IFwiUlNSUkVQRElSXCIsXG4gICAgICBwT3B0aW9ucyA9IGxpc3QoXCJPQkpWRVJTID0gJ0EnXCIpKX1cbmBgYCJ9 -->
+<pre class="r"><code>pCD &lt;- &quot;2200003499&quot;
+pTP &lt;- &quot;BD1K916730&quot; 
+pTC &lt;- &quot;BD1K916732&quot;
+pFileName &lt;- 
+  paste0(pCD, &quot;-&quot;, pTP, &quot;.csv&quot;)
+pOptions &lt;- 
+  paste0(&quot;TRKORR = '&quot;, pTP, &quot;'&quot;)
+if (pTC != &quot;&quot;) {
+  pOptions &lt;- 
+    paste0(pOptions, &quot; OR &quot;,
+           &quot;TRKORR = '&quot;, pTC, &quot;'&quot;)
+}
+if (!exists(&quot;E070&quot;)) {
+  E070 &lt;-
+    fRead_and_Union(
+      pSIDCLNT = &quot;BD1100&quot;,
+      pTable   = &quot;E070&quot;)}
+# startTR &lt;- 
+  # E070[AS4DATE &gt; &quot;20180101&quot; &amp; substr(TRKORR, 1,3) == &quot;BD1&quot;, 
+  #      min(TRKORR)]
+if (!exists(&quot;E07X&quot;)) {
+  E071 &lt;-
+    fRead_and_Union(
+      pSIDCLNT = &quot;BD1100&quot;,
+      pTable   = &quot;E071&quot;,
+      pOptions = list(pOptions)) %&gt;%
+    .[, AS4POS := NULL]          %&gt;%
+    unique()}
+if (!exists(&quot;RSZCOMPDIR&quot;)) {
+  RSZCOMPDIR &lt;-
+    fRead_and_Union(
+      pSIDCLNT = c(&quot;BD1100&quot;, &quot;BU1300&quot;, &quot;BP1300&quot;),
+      pTable   = &quot;RSZCOMPDIR&quot;,
+      pOptions = list(&quot;OBJVERS = 'A'&quot;))}
+if (!exists(&quot;RSRREPDIR&quot;)) {
+  RSRREPDIR &lt;-
+    fRead_and_Union(
+      pSIDCLNT = c(&quot;BD1100&quot;, &quot;BU1300&quot;, &quot;BP1300&quot;),
+      pTable   = &quot;RSRREPDIR&quot;,
+      pOptions = list(&quot;OBJVERS = 'A'&quot;))}</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -220,13 +348,27 @@ $(document).ready(function () {
 <h1>Transform</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEudGFibGUiLCJkYXRhLmZyYW1lIl0sIm5jb2wiOjMxLCJucm93IjoxMH0sInJkZiI6Ikg0c0lBQUFBQUFBQUJ0VllRWFBhT2hBMkpNV0VwcDEyZW5xbi9BTkdsbXhNamc0V3FZTXRHMXNKSkplTW05S1VHUUlkUTEvZjhmM3FIdHVLZ0l3dDdLUWtybWZLalBIMzdhNTJWNnVWTGZETklXd01HNUlrVmFXOUYreDdqOEg5S3Z1cVNQdlN3ZkwrbnlUdHZXUGdpRjF2Mk5WWUsvWk9US1VNS0VSVkFDZ0RwcU0yV0NLOVk2V2xJL1V2a1BEY0plbmdKL3NVZUUvV3BOS0s2OVZHSE1JMmwxWlZJQnB1Uk5sRFVvYnBZUHMrb242cFdJaVBiZXlVaXRQeC93SEFoVUYvZU9ucnlOYTlmdWNzY0s2NmJlM016ekFneHdCVHA5OTNFWFJ4SzhkZ1FJWm55cWx5MWRIelF0akh0amZvOXZEVlUzSjQxRU5CU2U2UVE3cWlVbUYzWVZ1ZzRzR2YzdEIvOWtHeDJ4UC9mQWZvcGVBelhoVG82YkNrcmdMRmczUUUyZXhoeDhOOEh6VjZ0a1dJYXhGTWNpWENrSWZwY3h5VzlFSWJGZy9TRVY1RG9MUkJDMmdLMGhEU3Q2VklSMkJicXFwQXlaQzJWU2hJZGRiU3FxcG1TclVzcVNibWtDVlZvYTVBYmRQMmFhbTQ3MzVubmN1VXZIVDhDeU13aUdrUUswdVV6cjdPNi90TXJqK0xzOXB1OFhTZU5VVkxkQkJqaWM1aExORXhTN2JwbEpvQ0V4MnlZbHFTYVhvT1V4TWRzR0xpeWxlTTRrSG0vbUdaNlVqWGpndmZQN243TXR2MmQ2TXBHdENRQ3FBb1ZSUzJpcTJNT2JhQXluUkloUkNseG1nQUtSQXV4NGhTQk51b2xlR0JhUjcxbTIzN2xHajVmbmQ3UzFib2JpRHQvYTNkdGE2N1ZtQTZIbEN1K3lBdS9KYWluYUdBUzBVclQ1SHJLa3Z4OElpZGdqOFdReno3d0hZWlVOai9zQ0NnYklBd0w2TkR5NERwZjBCZVRNTzcwWHlkeWhGL0JBYVhBYlZNempxMmhRbjNVYU4rei9YNUthYk9QRm9YRnIza1dpTlFQVGZnenIxVForUEdQVG5EY1NwMXhxNko0ZUExbHhudm5wTU9WOXR1cDllMWpWTSsrQlFUY2g3L2lMUU53algxY1RPVkxlT3BmT1dPUzZpUDdUVTlYRkpxT1RpZ2pzZlRkQWNrUHBmVlRnYUc1M0Z6K1g1K1hVN3J3c2dhRGFoSGVGcnlrcGtHVFZJMklESERDK3dIOFF5TmdKNEgySXp6OUxGQlkzclllYy9taU0zcmdVWGZ4d3ZoT2w0OFVYbnB6SExKWnA2T1o2YWlCZFRZV3U2YlNUam55ODJGalkvaElteCtpbGduQ09ZSDBleGJrM2ZJSzNaVi8yZGY3SFQ1bmQxK0NNYnk3TXRpUEpzeTArcnlMN1ZEYVhXcXJVaXJUekppSlJLVUhGY0VuQngwUUtOd092ODBpKzRlOEx6L2VmeHhsT05jV2srQ0IrSDRhRFdSS2o4ekgzSmZvNXZQTTE3NzBmUjJQQjN4TW82aWFCYkZaditHRTY0WTM0VzNzZFVrL0REaUdwa1ZjYjdSeWRGby9uV3ltSFA2TFl5bTQra3RmOE93dXQrWHZma2xHazhYZkoyWWRONWN6Qlp4dU1iTmJNSWw5d3NpL2ZnRnJuY2NWdlVVQUFBPSJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZHRRUlkgPC0gXG4gIEUwNzFbT0JKRUNUID09IFwiRUxFTVwiXVtcbiAgICBSU1pDT01QRElSLCBcbiAgICBvbiA9IC4oT0JKX05BTUUgPSBDT01QVUlELCBTWVNUSUQsIENMSUVOVCApLFxuICAgIG5vbWF0Y2ggPSAwXSAgICAgICAgICAgICAgICAgICAgICAgICAgXG5wcmludCh1bmlxdWUoZHRRUllbLCAuKENPTVBJRCldKSlcbmBgYCJ9 -->
+<pre class="r"><code>dtQRY &lt;- 
+  E071[OBJECT == &quot;ELEM&quot;][
+    RSZCOMPDIR, 
+    on = .(OBJ_NAME = COMPUID, SYSTID, CLIENT ),
+    nomatch = 0]                          
+print(unique(dtQRY[, .(COMPID)]))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEudGFibGUiLCJkYXRhLmZyYW1lIl0sIm5jb2wiOjEsIm5yb3ciOjF9LCJyZGYiOiJINHNJQUFBQUFBQUFCbDFQMndyQ01Bek5OcWVzb0NqK3g1aUtYK0FRQm9yWGg3Mk5PamNaekZiYWdqNzY1V282V3BBV21xU25KOGs1eHpTZms1d0FnQTlCaURIQXN1ZGo4S0FIa2M0dmdHRGFBUURqdjQvSlpwMFY2K3lVYnZlelpYRklrb1hUR1RKNnI2VFQxVi90dHZzc2RhbGxTNlZMSlZlcWFGd0xuT0xRSThHZnNaMCsxT0xmR0w1NE1IMGM4b0EvVk1NWlVuMXRJM1MyZU1JQm9yT2dUTlpjM0xVR1l4ek1Jcy9jdjFvdjg3OW1TR2h0VnV6V3NNcmFhK21sYXMxamhPSTc3ZkZETkV4WnM0aktXSEZGTFkrVXZMVkk1d28rUDgxWGVMZXVBUUFBIn0= -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["SYSTID"],"name":[1],"type":["chr"],"align":["left"]},{"label":["CLIENT"],"name":[2],"type":["chr"],"align":["left"]},{"label":["TRKORR"],"name":[3],"type":["chr"],"align":["left"]},{"label":["ACTIVITY"],"name":[4],"type":["chr"],"align":["left"]},{"label":["AS4POS"],"name":[5],"type":["chr"],"align":["left"]},{"label":["PGMID"],"name":[6],"type":["chr"],"align":["left"]},{"label":["OBJECT"],"name":[7],"type":["chr"],"align":["left"]},{"label":["OBJ_NAME"],"name":[8],"type":["chr"],"align":["left"]},{"label":["OBJFUNC"],"name":[9],"type":["chr"],"align":["left"]},{"label":["LOCKFLAG"],"name":[10],"type":["chr"],"align":["left"]},{"label":["GENNUM"],"name":[11],"type":["chr"],"align":["left"]},{"label":["LANG"],"name":[12],"type":["chr"],"align":["left"]},{"label":["i.SYSTID"],"name":[13],"type":["chr"],"align":["left"]},{"label":["i.CLIENT"],"name":[14],"type":["chr"],"align":["left"]},{"label":["CONTREL"],"name":[15],"type":["chr"],"align":["left"]},{"label":["CONTTIMESTMP"],"name":[16],"type":["chr"],"align":["left"]},{"label":["OWNER"],"name":[17],"type":["chr"],"align":["left"]},{"label":["BWAPPL"],"name":[18],"type":["chr"],"align":["left"]},{"label":["ACTIVFL"],"name":[19],"type":["chr"],"align":["left"]},{"label":["TIMESTMP"],"name":[20],"type":["chr"],"align":["left"]},{"label":["TSTPNM"],"name":[21],"type":["chr"],"align":["left"]},{"label":["TSTPDAT"],"name":[22],"type":["chr"],"align":["left"]},{"label":["TSTPTIM"],"name":[23],"type":["chr"],"align":["left"]},{"label":["OBJVERS"],"name":[24],"type":["chr"],"align":["left"]},{"label":["LASTUSED"],"name":[25],"type":["chr"],"align":["left"]},{"label":["CREATED"],"name":[26],"type":["chr"],"align":["left"]},{"label":["CHANGED_WITH"],"name":[27],"type":["chr"],"align":["left"]},{"label":["COMPID"],"name":[28],"type":["chr"],"align":["left"]},{"label":["VERSION"],"name":[29],"type":["chr"],"align":["left"]},{"label":["COMPDIM"],"name":[30],"type":["chr"],"align":["left"]},{"label":["OBJSTAT"],"name":[31],"type":["chr"],"align":["left"]}],"data":[{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"6","6":"R3TR","7":"ELEM","8":"00O2SQXYR73L7PQCJSMZF85JR","9":"","10":"3","11":"NA","12":"NA","13":"BD1","14":"100","15":"","16":"0","17":"DKEMPER","18":"NA","19":"X","20":"20180605135337","21":"KLINNOINEN","22":"20180605","23":"155337","24":"A","25":"20180612073759","26":"20160411134223","27":"","28":"LFI_FISDMP01_Q002","29":"128","30":"2","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"183","6":"R3TR","7":"ELEM","8":"00O2SQXYR73N90ETMQQO32OE6","9":"","10":"3","11":"NA","12":"NA","13":"BD1","14":"100","15":"","16":"0","17":"KLINNOINEN","18":"NA","19":"X","20":"20180605133730","21":"KLINNOINEN","22":"20180605","23":"153730","24":"A","25":"20180605133730","26":"20180503122556","27":"","28":"LFI_FISDMP01_Q008","29":"128","30":"2","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"286","6":"R3TR","7":"ELEM","8":"00O2SQXYR73N90EWNXJ1G1ZC7","9":"","10":"3","11":"NA","12":"NA","13":"BD1","14":"100","15":"","16":"0","17":"KLINNOINEN","18":"NA","19":"X","20":"20180605134401","21":"KLINNOINEN","22":"20180605","23":"154401","24":"A","25":"20180605134401","26":"20180503132836","27":"","28":"LFI_FISDMP02_Q006","29":"128","30":"2","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"40","6":"R3TR","7":"ELEM","8":"00O2SQXYR73L7PQCL9LPWFKEZ","9":"","10":"3","11":"NA","12":"NA","13":"BD1","14":"100","15":"","16":"0","17":"DKEMPER","18":"NA","19":"X","20":"20180605134842","21":"KLINNOINEN","22":"20180605","23":"154842","24":"A","25":"20180605134842","26":"20160411134313","27":"","28":"LFI_FISDMP02_Q002","29":"128","30":"2","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"6","6":"R3TR","7":"ELEM","8":"00O2SQXYR73L7PQCJSMZF85JR","9":"","10":"3","11":"NA","12":"NA","13":"BU1","14":"300","15":"","16":"0","17":"DKEMPER","18":"NA","19":"X","20":"20180607100444","21":"KLINNOINEN","22":"20180607","23":"120444","24":"A","25":"20180605135337","26":"20160411134223","27":"T","28":"LFI_FISDMP01_Q002","29":"128","30":"2","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"40","6":"R3TR","7":"ELEM","8":"00O2SQXYR73L7PQCL9LPWFKEZ","9":"","10":"3","11":"NA","12":"NA","13":"BU1","14":"300","15":"","16":"0","17":"DKEMPER","18":"NA","19":"X","20":"20180607100445","21":"KLINNOINEN","22":"20180607","23":"120445","24":"A","25":"20180605134842","26":"20160411134313","27":"T","28":"LFI_FISDMP02_Q002","29":"128","30":"2","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"183","6":"R3TR","7":"ELEM","8":"00O2SQXYR73N90ETMQQO32OE6","9":"","10":"3","11":"NA","12":"NA","13":"BU1","14":"300","15":"","16":"0","17":"KLINNOINEN","18":"NA","19":"X","20":"20180607100457","21":"KLINNOINEN","22":"20180607","23":"120457","24":"A","25":"20180605133730","26":"20180503122556","27":"T","28":"LFI_FISDMP01_Q008","29":"128","30":"2","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"286","6":"R3TR","7":"ELEM","8":"00O2SQXYR73N90EWNXJ1G1ZC7","9":"","10":"3","11":"NA","12":"NA","13":"BU1","14":"300","15":"","16":"0","17":"KLINNOINEN","18":"NA","19":"X","20":"20180607100457","21":"KLINNOINEN","22":"20180607","23":"120457","24":"A","25":"20180605134401","26":"20180503132836","27":"T","28":"LFI_FISDMP02_Q006","29":"128","30":"2","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"6","6":"R3TR","7":"ELEM","8":"00O2SQXYR73L7PQCJSMZF85JR","9":"","10":"3","11":"NA","12":"NA","13":"BP1","14":"300","15":"","16":"0","17":"DKEMPER","18":"NA","19":"X","20":"20180427125300","21":"MRVASANDANI","22":"20180427","23":"145300","24":"A","25":"20180615053402","26":"20160411134223","27":"T","28":"LFI_FISDMP01_Q002","29":"128","30":"1","31":"ACT"},{"1":"BD1","2":"100","3":"BD1K916734","4":"NA","5":"40","6":"R3TR","7":"ELEM","8":"00O2SQXYR73L7PQCL9LPWFKEZ","9":"","10":"3","11":"NA","12":"NA","13":"BP1","14":"300","15":"","16":"0","17":"DKEMPER","18":"NA","19":"X","20":"20180427125301","21":"MRVASANDANI","22":"20180427","23":"145301","24":"A","25":"20180615111556","26":"20160411134313","27":"T","28":"LFI_FISDMP02_Q002","29":"128","30":"1","31":"ACT"}],"options":{"columns":{"min":{},"max":[10],"total":[31]},"rows":{"min":[10],"max":[10],"total":[10]},"pages":{}}}
+{"columns":[{"label":["COMPID"],"name":[1],"type":["chr"],"align":["left"]}],"data":[{"1":"LFI_FISDMP15_Q003"}],"options":{"columns":{"min":{},"max":[10],"total":[1]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
   </script>
 </div>
 <!-- rnb-frame-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZHRET0MgPC0gXG4gIFJTUlJFUERJUltDT01QVFlQRSA9PSBcIlJFUFwiXVtcbiAgICBSU1pDT01QRElSW10sIG9uID0gLihDT01QVUlEKSwgXG4gICAgbm9tYXRjaCA9IDBdXG5gYGAifQ== -->
+<pre class="r"><code>dtDOC &lt;- 
+  RSRREPDIR[COMPTYPE == &quot;REP&quot;][
+    RSZCOMPDIR[], on = .(COMPUID), 
+    nomatch = 0]</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -248,12 +390,16 @@ $(document).ready(function () {
 <h1>Communicate</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZk9wZW5faW5fRXhjZWwocERUID0gZHRRUlksIHBGTiA9IHBGaWxlTmFtZSlcbiMgZk9wZW5faW5fRXhjZWwocERUID0gZHRET0MsIHBGTiA9IFwiZHRET0MuY3N2XCIpXG5gYGAifQ== -->
+<pre class="r"><code>fOpen_in_Excel(pDT = dtQRY, pFN = pFileName)
+# fOpen_in_Excel(pDT = dtDOC, pFN = &quot;dtDOC.csv&quot;)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZSAgIDogIlF1YWxpdHkgQXNzdXJhbmNlIFJlcG9ydCINCnN1YnRpdGxlOiAiQ0QgYW5kIFRyYW5zcG9ydCBDaGVjayINCmF1dGhvciAgOiAiRi5KLiBQYWR0Ig0KZGF0ZSAgICA6ICJgciBmb3JtYXQoU3lzLnRpbWUoKSwgJyVCICVkLCAlWScpYCINCm91dHB1dDoNCiAgaHRtbF9ub3RlYm9vazoNCiAgICB0b2M6IHllcw0KICBwZGZfZG9jdW1lbnQ6DQogICAgaGlnaGxpZ2h0OiB0YW5nbw0KICAgIHRvYzogeWVzDQogICAgdG9jX2RlcHRoOiA0DQplZGl0b3Jfb3B0aW9uczogDQogIGNodW5rX291dHB1dF90eXBlOiBpbmxpbmUNCi0tLQ0KDQpbUjREU10oaHR0cDovL3I0ZHMuaGFkLmNvLm56L2ludHJvZHVjdGlvbi5odG1sKQ0KDQpcbmV3cGFnZQ0KIVtMb2dvXShodHRwOi8vd3d3LmdyYW5kdmlzaW9uLmNvbS9pbWcvbG9nb0dWLnBuZykNCg0KIyBPYmplY3RpdmUNCg0KDQpgYGB7ciBzZXR1cH0NCiMgQ2xlYW5zZSBtZW1vcnkNCnJtKGxpc3QgPSBscygpKQ0KZ2MoKQ0KDQojIHBhcmFtZXRlcnMgU2V0dGluZ3MNCkJJRE9Dc3JjIDwtIA0KICBub3JtYWxpemVQYXRoKCJ+Ly4uLy4uL0dyYW5kVmlzaW9uL1NBUCBCSSBkb2N1bWVudGF0aW9uIC0gRG9jdW1lbnRzL2JpLWRvYy9zcmMvIikNCg0KIyBLbml0UiBTZXRVcCBsb2NhdGlvbg0KS1MgPC0gDQogIGZpbGUucGF0aCgNCiAgICAifiIsICJSVyIsICJRQVIiLCAiMDBfUlByb2oiLCAiMDBfR2xvYmFsIiwgIktuaXRSX1NldFVwLlIiKQ0KDQojIExvYWQgZnVuY3Rpb25zDQppbnZpc2libGUoc291cmNlKEtTKSkNCg0KIyBGVFAgLSBDb25uZWN0aW9uIHRvIEdWIEZpbGVTZXJ2ZXINCiMgQ29uc3RhbnRzDQojIGZvbGRlciAgPC0gIi9iaS9pYi9tZCIgICAgICAgICAgDQojIGxmb2xkZXIgPC0gZmlsZS5wYXRoKCIuLiIsIGZvbGRlcikgICMgbG9jYWwgZm9sZGVyDQojIGZzdXJsICAgPC0gcGFzdGUwKA0KIyAgICJmdHA6Ly9mcy5ncmFuZHZpc2lvbi5jb20vcHl0aGlhLyIsIGZvbGRlcikNCiMgdXNlcnB3ZCA8LSBwYXN0ZSgiZnRwYnAxIiwgcGFyYW1zJHBhc3N3b3JkLCBzZXAgPSAiOiIpDQoNCmBgYA0KDQojIERhdGEgSW1wb3J0DQoNCmBgYHtyIEltcG9ydH0NCg0KcENEICAgICAgICA8LSAiMjIwMDAwMzcwOCINCnBUUCA8LQ0KICBwYXN0ZSgiVFJLT1JSID0gJ0JEMUs5MTcwOTInIiwgIk9SIiwNCiAgICAgICAgIlRSS09SUiA9ICdCRDFLOTE3MTUxJyIsIHNlcCA9ICcgJykNCnBUUCA8LSAiVFJLT1JSID0gJ0JEMUs5MTY3MzQnIg0KDQpFMDcwIDwtDQogIGZSZWFkX2FuZF9VbmlvbigNCiAgICBwU0lEQ0xOVCA9ICJCRDExMDAiLA0KICAgIHBUYWJsZSAgID0gIkUwNzAiLA0KICAgIHBPcHRpb25zID0gbGlzdChwVFApKQ0KDQpFMDcxIDwtDQogIGZSZWFkX2FuZF9VbmlvbigNCiAgICBwU0lEQ0xOVCA9ICJCRDExMDAiLA0KICAgIHBUYWJsZSAgID0gIkUwNzEiLA0KICAgIHBPcHRpb25zID0gbGlzdChwVFApKQ0KDQpSU1pDT01QRElSIDwtDQogIGZSZWFkX2FuZF9VbmlvbigNCiAgICBwU0lEQ0xOVCA9IGMoIkJEMTEwMCIsICJCVTEzMDAiLCAiQlAxMzAwIiksDQogICAgcFRhYmxlICAgPSAiUlNaQ09NUERJUiIsDQogICAgcE9wdGlvbnMgPSBsaXN0KCJPQkpWRVJTID0gJ0EnIikpDQoNClJTUlJFUERJUiA8LQ0KICBmUmVhZF9hbmRfVW5pb24oDQogICAgcFNJRENMTlQgPSBjKCJCRDExMDAiLCAiQlUxMzAwIiwgIkJQMTMwMCIpLA0KICAgIHBUYWJsZSAgID0gIlJTUlJFUERJUiIsDQogICAgcE9wdGlvbnMgPSBsaXN0KCJPQkpWRVJTID0gJ0EnIikpDQoNCmBgYA0KDQojIFRpZHkNCg0KYGBge3IgVGlkeX0NCg0KYGBgDQoNCiMgVHJhbnNmb3JtDQoNCmBgYHtyIFRyYW5zZm9ybX0NCmR0UVJZIDwtIA0KICBFMDcxW09CSkVDVCA9PSAiRUxFTSJdWw0KICAgIFJTWkNPTVBESVIsIA0KICAgIG9uID0gLihPQkpfTkFNRSA9IENPTVBVSUQgKSwNCiAgICBub21hdGNoID0gMF0gICAgICAgICAgICAgICAgICAgICAgICAgICAgJVQ+JQ0KICBwcmludChkdFFSWSkNCg0KZHRET0MgPC0gDQogIFJTUlJFUERJUltDT01QVFlQRSA9PSAiUkVQIl1bDQogICAgUlNaQ09NUERJUltdLCBvbiA9IC4oQ09NUFVJRCksIA0KICAgIG5vbWF0Y2ggPSAwXQ0KYGBgDQoNCiMgVmlzdWFsaXplDQoNCmBgYHtyIFZpc3VhbGl6ZX0NCg0KYGBgDQoNCiMgTW9kZWwNCg0KYGBge3IgTW9kZWx9DQoNCmBgYA0KDQojIENvbW11bmljYXRlDQoNCmBgYHtyIENvbW11bmljYXRlfQ0KDQpmT3Blbl9pbl9FeGNlbChwRFQgPSBkdFFSWSwgcEZOID0gImR0UVJZLmNzdiIpDQpmT3Blbl9pbl9FeGNlbChwRFQgPSBkdERPQywgcEZOID0gImR0RE9DLmNzdiIpDQpgYGANCg0KDQo=</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZSAgIDogIlF1YWxpdHkgQXNzdXJhbmNlIFJlcG9ydCINCnN1YnRpdGxlOiAiQ0QgYW5kIFRyYW5zcG9ydCBDaGVjayINCmF1dGhvciAgOiAiRi5KLiBQYWR0Ig0KZGF0ZSAgICA6ICJgciBmb3JtYXQoU3lzLnRpbWUoKSwgJyVCICVkLCAlWScpYCINCm91dHB1dDoNCiAgaHRtbF9ub3RlYm9vazoNCiAgICB0b2M6IHllcw0KICBwZGZfZG9jdW1lbnQ6DQogICAgaGlnaGxpZ2h0OiB0YW5nbw0KICAgIHRvYzogeWVzDQogICAgdG9jX2RlcHRoOiA0DQplZGl0b3Jfb3B0aW9uczogDQogIGNodW5rX291dHB1dF90eXBlOiBpbmxpbmUNCi0tLQ0KDQpbUjREU10oaHR0cDovL3I0ZHMuaGFkLmNvLm56L2ludHJvZHVjdGlvbi5odG1sKQ0KDQpcbmV3cGFnZQ0KIVtMb2dvXShodHRwOi8vd3d3LmdyYW5kdmlzaW9uLmNvbS9pbWcvbG9nb0dWLnBuZykNCg0KIyBPYmplY3RpdmUNCg0KDQpgYGB7ciBzZXR1cH0NCiMgQ2xlYW5zZSBtZW1vcnkNCnJtKGxpc3QgPSBscygpKQ0KZ2MoKQ0KDQojIHBhcmFtZXRlcnMgU2V0dGluZ3MNCkJJRE9Dc3JjIDwtIA0KICBub3JtYWxpemVQYXRoKCJ+Ly4uLy4uL0dyYW5kVmlzaW9uL1NBUCBCSSBkb2N1bWVudGF0aW9uIC0gRG9jdW1lbnRzL2JpLWRvYy9zcmMvIikNCg0KIyBLbml0UiBTZXRVcCBsb2NhdGlvbg0KS1MgPC0gDQogIGZpbGUucGF0aCgNCiAgICAifiIsICJSVyIsICJRQVIiLCAiMDBfUlByb2oiLCAiMDBfR2xvYmFsIiwgIktuaXRSX1NldFVwLlIiKQ0KDQojIExvYWQgZnVuY3Rpb25zDQppbnZpc2libGUoc291cmNlKEtTKSkNCg0KIyBGVFAgLSBDb25uZWN0aW9uIHRvIEdWIEZpbGVTZXJ2ZXINCiMgQ29uc3RhbnRzDQojIGZvbGRlciAgPC0gIi9iaS9pYi9tZCIgICAgICAgICAgDQojIGxmb2xkZXIgPC0gZmlsZS5wYXRoKCIuLiIsIGZvbGRlcikgICMgbG9jYWwgZm9sZGVyDQojIGZzdXJsICAgPC0gcGFzdGUwKA0KIyAgICJmdHA6Ly9mcy5ncmFuZHZpc2lvbi5jb20vcHl0aGlhLyIsIGZvbGRlcikNCiMgdXNlcnB3ZCA8LSBwYXN0ZSgiZnRwYnAxIiwgcGFyYW1zJHBhc3N3b3JkLCBzZXAgPSAiOiIpDQoNCmBgYA0KDQojIERhdGEgSW1wb3J0DQoNCmBgYHtyIEltcG9ydH0NCg0KcENEIDwtICIyMjAwMDAzNDk5Ig0KcFRQIDwtICJCRDFLOTE2NzMwIiANCnBUQyA8LSAiQkQxSzkxNjczMiINCg0KcEZpbGVOYW1lIDwtIA0KICBwYXN0ZTAocENELCAiLSIsIHBUUCwgIi5jc3YiKQ0KDQpwT3B0aW9ucyA8LSANCiAgcGFzdGUwKCJUUktPUlIgPSAnIiwgcFRQLCAiJyIpDQoNCmlmIChwVEMgIT0gIiIpIHsNCiAgcE9wdGlvbnMgPC0gDQogICAgcGFzdGUwKHBPcHRpb25zLCAiIE9SICIsDQogICAgICAgICAgICJUUktPUlIgPSAnIiwgcFRDLCAiJyIpDQp9DQoNCg0KaWYgKCFleGlzdHMoIkUwNzAiKSkgew0KICBFMDcwIDwtDQogICAgZlJlYWRfYW5kX1VuaW9uKA0KICAgICAgcFNJRENMTlQgPSAiQkQxMTAwIiwNCiAgICAgIHBUYWJsZSAgID0gIkUwNzAiKX0NCg0KIyBzdGFydFRSIDwtIA0KICAjIEUwNzBbQVM0REFURSA+ICIyMDE4MDEwMSIgJiBzdWJzdHIoVFJLT1JSLCAxLDMpID09ICJCRDEiLCANCiAgIyAgICAgIG1pbihUUktPUlIpXQ0KDQppZiAoIWV4aXN0cygiRTA3WCIpKSB7DQogIEUwNzEgPC0NCiAgICBmUmVhZF9hbmRfVW5pb24oDQogICAgICBwU0lEQ0xOVCA9ICJCRDExMDAiLA0KICAgICAgcFRhYmxlICAgPSAiRTA3MSIsDQogICAgICBwT3B0aW9ucyA9IGxpc3QocE9wdGlvbnMpKSAlPiUNCiAgICAuWywgQVM0UE9TIDo9IE5VTExdICAgICAgICAgICU+JQ0KICAgIHVuaXF1ZSgpfQ0KDQppZiAoIWV4aXN0cygiUlNaQ09NUERJUiIpKSB7DQogIFJTWkNPTVBESVIgPC0NCiAgICBmUmVhZF9hbmRfVW5pb24oDQogICAgICBwU0lEQ0xOVCA9IGMoIkJEMTEwMCIsICJCVTEzMDAiLCAiQlAxMzAwIiksDQogICAgICBwVGFibGUgICA9ICJSU1pDT01QRElSIiwNCiAgICAgIHBPcHRpb25zID0gbGlzdCgiT0JKVkVSUyA9ICdBJyIpKX0NCg0KaWYgKCFleGlzdHMoIlJTUlJFUERJUiIpKSB7DQogIFJTUlJFUERJUiA8LQ0KICAgIGZSZWFkX2FuZF9VbmlvbigNCiAgICAgIHBTSURDTE5UID0gYygiQkQxMTAwIiwgIkJVMTMwMCIsICJCUDEzMDAiKSwNCiAgICAgIHBUYWJsZSAgID0gIlJTUlJFUERJUiIsDQogICAgICBwT3B0aW9ucyA9IGxpc3QoIk9CSlZFUlMgPSAnQSciKSl9DQoNCmBgYA0KDQojIFRpZHkNCg0KYGBge3IgVGlkeX0NCg0KYGBgDQoNCiMgVHJhbnNmb3JtDQoNCmBgYHtyIFRyYW5zZm9ybX0NCmR0UVJZIDwtIA0KICBFMDcxW09CSkVDVCA9PSAiRUxFTSJdWw0KICAgIFJTWkNPTVBESVIsIA0KICAgIG9uID0gLihPQkpfTkFNRSA9IENPTVBVSUQsIFNZU1RJRCwgQ0xJRU5UICksDQogICAgbm9tYXRjaCA9IDBdICAgICAgICAgICAgICAgICAgICAgICAgICANCg0KcHJpbnQodW5pcXVlKGR0UVJZWywgLihDT01QSUQpXSkpDQoNCmR0RE9DIDwtIA0KICBSU1JSRVBESVJbQ09NUFRZUEUgPT0gIlJFUCJdWw0KICAgIFJTWkNPTVBESVJbXSwgb24gPSAuKENPTVBVSUQpLCANCiAgICBub21hdGNoID0gMF0NCmBgYA0KDQojIFZpc3VhbGl6ZQ0KDQpgYGB7ciBWaXN1YWxpemV9DQoNCmBgYA0KDQojIE1vZGVsDQoNCmBgYHtyIE1vZGVsfQ0KDQpgYGANCg0KIyBDb21tdW5pY2F0ZQ0KDQpgYGB7ciBDb21tdW5pY2F0ZX0NCg0KZk9wZW5faW5fRXhjZWwocERUID0gZHRRUlksIHBGTiA9IHBGaWxlTmFtZSkNCiMgZk9wZW5faW5fRXhjZWwocERUID0gZHRET0MsIHBGTiA9ICJkdERPQy5jc3YiKQ0KYGBgDQoNCg0K</div>
 
 
 

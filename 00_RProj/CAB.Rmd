@@ -1,0 +1,196 @@
+---
+title: "Change Advisory Board (CAB)"
+subtitle: "BI - Planning"
+author: "F.J. Padt"
+date: "`r format(Sys.time(), '%B %d, %Y %H:%M')`"
+output: 
+  html_notebook: 
+    highlight: tango
+    theme: spacelab
+    toc: yes
+  html_document: 
+    highlight: tango
+    theme: spacelab
+    toc: no
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  eval    = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  image   = TRUE,
+  results = "as-is")
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+library(readxl)
+
+# folder locations
+RW   <- file.path("..", "..")
+PRJ  <- file.path(RW  , "QAR")
+MOD  <- file.path(PRJ , "00_RProj")
+RAW  <- file.path(PRJ , "10_RawData")
+DAT  <- file.path(PRJ , "11_PrepData")
+RES  <- file.path(PRJ , "60_Results")
+FIG  <- file.path(PRJ , "70_Figures")
+# MIG  <- file.path("C:", "Users", "fpadt", "GrandVision", 
+#                   "iSynergy - 70. Migration") 
+
+#source('../pythia/SharedFunctions/GenericFunctions.R')
+invisible(source(file.path(MOD, "00_Global", "iSynGeneral.R")))
+
+pDAY <- today()
+pYRW <- paste("_", year(today()), "W", isoweek(today()), sep = "") 
+dtCR <- fread(file.path(RAW, paste0("CR", pYRW, ".csv"))) 
+dtCD <- fread(file.path(RAW, paste0("CD", pYRW, ".csv"))) 
+
+dtCR_HDR <- fread(file.path(DAT, "CR_HDR.csv"))
+dtCD_HDR <- fread(file.path(DAT, "CD_HDR.csv"))
+
+# drop useless columns
+dtCR[, dtCR_HDR[NEW == '', OLD] := NULL]
+dtCD[, dtCD_HDR[NEW == '', OLD] := NULL]
+
+# rename remaining columns
+setnames(dtCR, dtCR_HDR[NEW != '', NEW])
+setnames(dtCD, dtCD_HDR[NEW != '', NEW])
+
+# Add CRs which are on other teams
+dtBIR3 <- fread(file.path(RAW, "BIR3.txt")) 
+setnames(dtBIR3, "V1", "CR_REQ_ID")
+
+dtCR <- 
+  rbindlist(
+    list(
+      dtCR[substr(CR_CATEGORY,1,5) == "SAP B"],
+      dtCR[dtBIR3, on = .(CR_REQ_ID)])) %>%
+  unique()
+
+
+dtTSO <- 
+  read_xlsx(
+    path  = file.path(RAW, "TSO_BI.xlsx"), 
+    sheet = "TimeSheet Overview 2017-12-11")
+
+# Developers
+cDEV <- c(CD_DEVELOPER = 
+  "Floris Padt",             # COE
+  "Chris Houlder",           # SAP Indigo
+  "Shreyas Shivashankar",    # AMS
+  "Durgesh HEDAU",           # AMS
+  "Rene van de Lei",         # EXPERTUM
+  "Dirk Kemper",             # EXPERTUM
+  "Sander Van Willigen",     # EXPERTUM
+  "Sjoerd Van Middelkoop",   # EXPERTUM
+  "Kasper Groen")            # GAAN
+
+# Daily Tasks
+cTASK <- c(
+  "0: Monitoring",
+  "0: Service Requests",
+  "0: Incidents",
+  "0: House Keeping",
+  "0: Out Of Office")
+
+# Expand Daily Tasks per Developer  
+dtEXP <- 
+  expand.grid(
+    cDEV, cTASK)  %>%
+  as.data.table() %T>%
+  setnames(c("CD_DEVELOPER", "CR_URGENCY"))
+
+# note the CR_URGENCY Field is indicating the Prio
+# Add Prio
+# dtPRIO <- fread(file.path(RAW, "PRIO.csv")) 
+
+# dtCR <- dtPRIO[dtCR, on = .(CR_REQ_ID)]
+
+# COmbine 
+dtALL <- dtCD[dtCR, on = .(CD_REQ_ID == CR_REQ_ID)]
+setnames(dtALL, "CD_REQ_ID", "CR_REQ_ID")
+
+# Convert character to DateTime
+dtALL[, `:=`(
+  CR_CR_ON     = dmy(dtALL[, substr(CR_REQ_START, 1, 10)]),
+  CR_REQ_START = dmy(dtALL[, substr(CR_REQ_START, 1, 10)]),
+  CR_REQ_END   = dmy(dtALL[, substr(CR_REQ_END  , 1, 10)]),
+  CR_LCH_ON    = dmy(dtALL[, substr(CR_LCH_ON   , 1, 10)]),
+  CR_DUE_BY    = dmy(dtALL[, substr(CR_DUE_BY   , 1, 10)]),
+  CD_CR_ON     = dmy(dtALL[, substr(CD_CR_ON    , 1, 10)]),
+  CD_REQ_START = dmy(dtALL[, substr(CD_REQ_START, 1, 10)]),
+  CD_REQ_END   = dmy(dtALL[, substr(CD_REQ_END  , 1, 10)]),
+  CD_DUE_BY    = dmy(dtALL[, substr(CD_DUE_BY   , 1, 10)]),
+  CD_LCH_ON    = dmy(dtALL[, substr(CD_LCH_ON   , 1, 10)]))]
+
+# library(readxl)
+# dtAMS <- as.data.table(
+#   read_excel(file.path(RAW, "AMS_PLAN.xlsx"), 
+#     col_types = c("numeric", "date", "date", 
+#         "date", "numeric", "numeric", "numeric")))
+
+# dtALL <- 
+  # dtAMS[dtALL, on = .(CR_REQ_ID)]
+
+
+```
+
+```{r  export}
+
+
+# rename remaining columns
+# setnames(
+#   dtALL,
+#   intersect(names(dtALL), dtCR_HDR$NEW),
+#   dtCR_HDR[NEW %in% intersect(names(dtALL), dtCR_HDR$NEW), 
+#             paste("CR", 
+#                   gsub(pattern = " ", replacement = "_", OLD),
+#                   sep = "_")])
+           
+# setnames(
+#   dtALL,
+#   intersect(names(dtALL), dtCD_HDR$NEW),
+#   dtCD_HDR[NEW %in% intersect(names(dtALL), dtCD_HDR$NEW), 
+#            paste("CD", 
+#                  gsub(pattern = " ", replacement = "_", OLD),
+#                  sep = "_")])
+
+
+# Data Settings
+pXLSX    <- "PLAN" 
+pWSHT    <- TRUE
+
+dtSUB <- 
+  dtALL[, .(
+    CR_URGENCY   , CR_REQ_ID   , CR_STATUS,
+    CD_ID        , CD_STATUS   , CR_DESCR,
+    CD_DESCR     , CD_DEVELOPER, CR_CUR_PROCESSOR,
+    CR_SUP_TEAM)]
+
+dtADD <- 
+  copy(dtSUB)[0] %>%
+  .[dtEXP, on = .(CR_URGENCY, CD_DEVELOPER)]
+
+dtPLAN <- 
+  list(
+    dtSUB %>%
+      .[, CR_URGENCY := ifelse(CR_URGENCY == "", 
+                               "9: BackLog", CR_URGENCY)],
+    dtADD) %>%
+  rbindlist()
+
+
+    
+setkey(dtPLAN, CR_URGENCY, CR_STATUS)
+
+fOpen_in_Excel(pDT = dtPLAN,  pFN = "dtPLAN.csv")
+fOpen_in_Excel(pDT = dtALL ,  pFN = "dtALL.csv")
+
+```
+
+

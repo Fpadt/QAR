@@ -1,0 +1,71 @@
+---
+title: "Assortment"
+author: "F.J.Padt"
+date: "February 15, 2018"
+output: pdf_document
+---
+
+```{r setup}
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# Data Settings
+pXLSX    <- "RSPC-Schedule" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+pBI_SYST <- "BP1"
+pR3_SYST <- "RP1"
+
+# KnitR SetUp location
+KS   <- 
+  file.path("C:", "Users", "fpadt", "OneDrive - GrandVision", "Documents", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+```
+
+```{r Layout Module}
+
+dtMALG   <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "MALG")
+# dtTWGLVT <- 
+#   fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "TWGLVT")
+dtTWGF <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "TWGF")
+dtTWGV <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "TWGV")
+dtTWML <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "TWML")
+dtWLMV <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "WLMV")
+dtWRF1 <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "WRF1")
+dtWRS1 <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "WRS1")
+dtTWGVT <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "TWGVT")
+dtTWMLT <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "TWMLT")
+dtTWWV <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "TWWV")
+dtTWGLV <- 
+  fReadSAPTable(pSystID   = pR3_SYST, pClient   = "300", pTable    = "TWGLV")
+dtPLANT <- 
+  fReadSAPTable(
+    pSystID = pBI_SYST, 
+    pClient = "300", 
+    pTable  = "/BI0/PPLANT",
+    pFields = list('PLANT', 'SALESORG')) %>%
+  .[SALESORG %in% c("NL01", "NL02", "BE01", "BE02")]
+
+
+dtMALG_NL <- 
+  dtMALG[MEINH == "ST" & substr(LAYGR,1,2) == "NL"]
+dtTWGLV_NL <- 
++   dtTWGLV[substr(LAYGR, 1,2) == "NL"]
+```
+

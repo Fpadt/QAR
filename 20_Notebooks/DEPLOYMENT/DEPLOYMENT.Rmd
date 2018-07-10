@@ -53,35 +53,55 @@ invisible(source(KS))
 
 ```{r Import}
 
-pCD        <- "2200003708"
-pTP <-
-  paste("TRKORR = 'BD1K917092'", "OR",
-        "TRKORR = 'BD1K917151'", sep = ' ')
-pTP <- "TRKORR = 'BD1K916734'"
+pCD <- "2200003499"
+pTP <- "BD1K916730" 
+pTC <- "BD1K916732"
 
-E070 <-
-  fRead_and_Union(
-    pSIDCLNT = "BD1100",
-    pTable   = "E070",
-    pOptions = list(pTP))
+pFileName <- 
+  paste0(pCD, "-", pTP, ".csv")
 
-E071 <-
-  fRead_and_Union(
-    pSIDCLNT = "BD1100",
-    pTable   = "E071",
-    pOptions = list(pTP))
+pOptions <- 
+  paste0("TRKORR = '", pTP, "'")
 
-RSZCOMPDIR <-
-  fRead_and_Union(
-    pSIDCLNT = c("BD1100", "BU1300", "BP1300"),
-    pTable   = "RSZCOMPDIR",
-    pOptions = list("OBJVERS = 'A'"))
+if (pTC != "") {
+  pOptions <- 
+    paste0(pOptions, " OR ",
+           "TRKORR = '", pTC, "'")
+}
 
-RSRREPDIR <-
-  fRead_and_Union(
-    pSIDCLNT = c("BD1100", "BU1300", "BP1300"),
-    pTable   = "RSRREPDIR",
-    pOptions = list("OBJVERS = 'A'"))
+
+if (!exists("E070")) {
+  E070 <-
+    fRead_and_Union(
+      pSIDCLNT = "BD1100",
+      pTable   = "E070")}
+
+# startTR <- 
+  # E070[AS4DATE > "20180101" & substr(TRKORR, 1,3) == "BD1", 
+  #      min(TRKORR)]
+
+if (!exists("E07X")) {
+  E071 <-
+    fRead_and_Union(
+      pSIDCLNT = "BD1100",
+      pTable   = "E071",
+      pOptions = list(pOptions)) %>%
+    .[, AS4POS := NULL]          %>%
+    unique()}
+
+if (!exists("RSZCOMPDIR")) {
+  RSZCOMPDIR <-
+    fRead_and_Union(
+      pSIDCLNT = c("BD1100", "BU1300", "BP1300"),
+      pTable   = "RSZCOMPDIR",
+      pOptions = list("OBJVERS = 'A'"))}
+
+if (!exists("RSRREPDIR")) {
+  RSRREPDIR <-
+    fRead_and_Union(
+      pSIDCLNT = c("BD1100", "BU1300", "BP1300"),
+      pTable   = "RSRREPDIR",
+      pOptions = list("OBJVERS = 'A'"))}
 
 ```
 
@@ -97,9 +117,10 @@ RSRREPDIR <-
 dtQRY <- 
   E071[OBJECT == "ELEM"][
     RSZCOMPDIR, 
-    on = .(OBJ_NAME = COMPUID ),
-    nomatch = 0]                            %T>%
-  print(dtQRY)
+    on = .(OBJ_NAME = COMPUID, SYSTID, CLIENT ),
+    nomatch = 0]                          
+
+print(unique(dtQRY[, .(COMPID)]))
 
 dtDOC <- 
   RSRREPDIR[COMPTYPE == "REP"][
@@ -123,8 +144,8 @@ dtDOC <-
 
 ```{r Communicate}
 
-fOpen_in_Excel(pDT = dtQRY, pFN = "dtQRY.csv")
-fOpen_in_Excel(pDT = dtDOC, pFN = "dtDOC.csv")
+fOpen_in_Excel(pDT = dtQRY, pFN = pFileName)
+# fOpen_in_Excel(pDT = dtDOC, pFN = "dtDOC.csv")
 ```
 
 

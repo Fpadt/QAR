@@ -40,6 +40,11 @@ invisible(source(KS))
 
 ```{r IMPORT}
 
+ZFIAR_CC<- 
+  fRead_and_Union(
+    pSIDCLNT = c("RP1300", "RU1300"), 
+    pTable   = "ZFIAR_CC")
+
 dtZFIAR_ADM <- 
   fRead_and_Union(
     pSIDCLNT = c("RP1300", "RU1300"), 
@@ -85,7 +90,9 @@ dtFSV_BI <-
 ```
 
 ```{r Transform}
-dtZFIAR_ADM[, MANDT := NULL]
+dtZFIAR_ADM <- 
+  copy(ZFIAR_ADM) %>%
+  .[, MANDT := NULL]
 
 flds <- 
   c("EMERALD_POSITIVE", "EMERALD_NEGATIVE", "EMERALD_PRODUCT_GROUP", "MAPPING_FLAG" ,  "EMERALD_S_ACCOUNT", "EMERALD_MA_ACCOUNT", "INTERCOMPANY_PARTNER_REQ" )

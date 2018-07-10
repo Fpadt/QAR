@@ -1,0 +1,132 @@
+---
+title   : "Quality Assurance Report"
+subtitle: ""
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png)
+
+# Objective
+
+
+```{r setup}
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# parameters Settings
+BIDOCsrc <- 
+  normalizePath("~/../../GrandVision/SAP BI documentation - Documents/bi-doc/src/")
+
+# KnitR SetUp location
+KS <- 
+  file.path(
+    "~", "RW", "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# FTP - Connection to GV FileServer
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+# Data Import
+
+```{r Import}
+RODSAPPL <-
+  fRead_and_Union(
+    pSIDCLNT = c("RP1300", "BP1300"),
+    pTable   = "RODSAPPL",
+    pOptions = list("OBJVERS = 'A'"))
+
+RODSAPPLT <-
+  fRead_and_Union(
+    pSIDCLNT = c("RP1300", "BP1300"),
+    pTable   = "RODSAPPLT",
+    pOptions = list("OBJVERS = 'A'", "AND", 
+                    "LANGU   = 'E'"))
+
+RSDCHABAS <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSDCHABAS",
+    pOptions = list("OBJVERS = 'A'"),
+    pFields  = list("CHABASNM"))
+
+RSRREPDIR <-
+  fRead_and_Union(
+    pSIDCLNT = "BP1300",
+    pTable   = "RSRREPDIR",
+    pOptions = list("OBJVERS = 'A'"))
+
+# TABLE <- 
+#   fRead_and_Union(
+#     pType    = "B", 
+#     pTable   = "", 
+#     pOptions = list("SPRSL = 'E'"),
+#     pFields  = fGetFields(pSYSTID = "BP1", pTable = "USGRPT", pCLIENT = "300"))
+
+```
+
+# Tidy
+
+```{r Tidy}
+
+```
+
+# Transform
+
+```{r Transform}
+
+dtQRY_MD <- 
+  RSDCHABAS[
+    RSRREPDIR, 
+    on = .(SYSTID, CLIENT, CHABASNM = INFOCUBE),
+    nomatch = 0]                  %>%
+  .[substr(COMPUID,1,1) != "!"]
+
+dtRODSAPPL <- 
+  RODSAPPLT[RODSAPPL, on = .(SYSTID, CLIENT, HIER, APPLNM, OBJVERS )] %>%
+  .[, .(NAME, TXTLG)]
+
+```
+
+# Visualize
+
+```{r Visualize}
+
+```
+
+# Model
+
+```{r Model}
+
+```
+
+# Communicate
+
+```{r Communicate}
+
+fOpen_in_Excel(pDT = dtxxx, pFN = "dtxxx.csv")
+```
+
+

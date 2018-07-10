@@ -1,0 +1,247 @@
+---
+title: "InfoObjextText"
+author: "F.J.Padt"
+date: "`r Sys.Date()`"
+output: 
+   pdf_document:
+    toc:             true
+    toc_depth:       2
+    number_sections: true
+    fig_caption:     true
+    fig_crop:        true
+    highlight:       tango    
+---
+
+\newpage
+![Logo](http://www.grandvision.com/img/logoGV.png) 
+
+```{r RSetup, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+# rm(list=ls())
+
+library("reshape2", lib.loc="~/R/R-3.2.0/library")
+
+source('../QAR/00_RProj/00_Global/iSynGeneral.R')
+# source('~/RW/grandvision2/lib/functions.R')
+# Initialization
+# IN MS ACCESS run IOBJECTS_RECORDCOUNT in modiSYN
+
+# flag Settings
+fECHO    <- FALSE
+fEVAL    <- TRUE
+fRESULTS <- 'asis' 
+
+pROWS    <- 10
+
+# Data Settings
+pSYSTID   <- "BP1"
+pCLNT     <- "300"
+pLOGSYS   <- paste0(pSYSTID, "C", pCLNT)
+pHOME     <- "C:/Users/fpadt/Documents/RW/QAR"
+pPATH     <- paste0(pHOME, "/60_Results")  
+pFILE     <- "UAT_MD"
+pXLSX     <- "xlsx"
+pFULLNAME <- paste0(pPATH, "/", pFILE, ".", pXLSX)
+pHEAD     <- 5 
+
+lCol <- c("LANGU", "TXTSH", "TXTMD", "TXTLG")
+
+# Open Excel for storing results
+if(file.exists(paste0(pFULLNAME, "/", pXLSX)) == TRUE){
+   file.remove(paste0(pPpFULLNAMEath, "/", pXLSX))
+}
+
+fWriteToSheet(data.frame(LOGSYS = pLOGSYS), 
+              pPATH, pFILE, "PARAM"   , pAppend = FALSE )
+
+```
+
+# Data Dictionary
+
+```{r R3, echo=FALSE, eval=TRUE, cache=FALSE, results='hide' }
+
+# Combine the DD and the AP245
+pTable <- "MARA"
+dtAPDD <- merge(fGetDD(pTable), 
+               fGetAP245()[, .(TABNAME, FIELDNAME, BI, TXT, TYPE)],
+           by = c("TABNAME", "FIELDNAME"), all.x = TRUE)
+setnames(dtAPDD, 
+         c("BI"      , "TXT"      , "TYPE"),
+         c("AP245_BI", "AP245_TXT", "AP245_TP"))
+
+# Load MARA
+dtMARA1 <- as.data.table(
+  read.delim("~/SAP/SAP GUI/M1.txt", encoding="UTF-8", 
+             comment.char="#", colClasses = "character", 
+             stringsAsFactors = FALSE))
+dtMARA1[, `:=`(X = NULL, MANDT = NULL)]
+
+dtMARA2 <- as.data.table(
+  read.delim("~/SAP/SAP GUI/M2.txt", encoding="UTF-8", 
+             comment.char="#", colClasses = "character", 
+             stringsAsFactors = FALSE))
+dtMARA2[, `:=`(X = NULL, MANDT = NULL)]
+
+dtMARA3 <- as.data.table(
+  read.delim("~/SAP/SAP GUI/M3.txt", encoding="UTF-8", 
+             comment.char="#", colClasses = "character", 
+             stringsAsFactors = FALSE))
+dtMARA3[, `:=`(X = NULL, MANDT = NULL)]
+
+dtMARA4 <- as.data.table(
+  read.delim("~/SAP/SAP GUI/M4.txt", encoding="UTF-8", 
+             comment.char="#", colClasses = "character", 
+             stringsAsFactors = FALSE))
+dtMARA4[, `:=`(X = NULL, MANDT = NULL)]
+
+dtMARA5 <- as.data.table(
+  read.delim("~/SAP/SAP GUI/M5.txt", encoding="UTF-8", 
+             comment.char="#", colClasses = "character", 
+             stringsAsFactors = FALSE))
+dtMARA5[, `:=`(X = NULL, MANDT = NULL)]
+
+l_names <- c(names(dtMARA1), names(dtMARA2), names(dtMARA3), names(dtMARA4), names(dtMARA5))
+write.table(data.frame(kl=l_names), file = "c:/ftp/fields.txt",sep = ";", 
+            row.names = FALSE, col.names = FALSE)
+
+dtMARA <- merge(dtMARA1, dtMARA2, by = "MATNR")
+dtMARA <- merge(dtMARA , dtMARA3, by = "MATNR")
+dtMARA <- merge(dtMARA , dtMARA4, by = "MATNR")
+dtMARA <- merge(dtMARA , dtMARA5, by = "MATNR")
+
+save(dtMARA, file= "MARA.RData")
+rm(dtMARA1, dtMARA2, dtMARA3, dtMARA4, dtMARA5)
+
+# Analysis
+dtMARA      <- dtMARA[, `:=` (MAKTX = NULL, MAKTG = NULL)]
+lstMARA     <- fTableOverview(dtMARA)
+dtMARA_UCNT <- lstMARA[["dtRATIO"]]
+dtMARA_UCNT <- dtMARA_UCNT[, FLDNM:= sub(pattern = "X\\.", 
+                                         replacement = "/", FLDNM)]
+dtMARA_UCNT <- dtMARA_UCNT[, FLDNM:= sub(pattern = "\\.", 
+                                         replacement = "/", FLDNM)]
+setnames(dtMARA_UCNT, 
+         c("FLDNM"    , "UCOUNT"),
+         c("FIELDNAME", "R3_UCNT"))
+
+dtMARA_META <- merge(dtMARA_UCNT, 
+                     dtAPDD[, .(TABNAME, FIELDNAME, TXTTAB, DDTEXT, REPTEXT, 
+                               SCRTEXT_S, SCRTEXT_M, SCRTEXT_L, LOWERCASE, 
+                               AP245_BI, AP245_TXT, AP245_TP)], 
+                     by = "FIELDNAME", all = TRUE)
+dtMARA_META <- dtMARA_META[order(R3_UCNT, decreasing = TRUE)]
+rm(dtAPDD, dtMARA_UCNT)
+# write.table(dtMARA_META, file = "0MATERIAL.csv", sep = ";", na = " ",
+#             row.names = FALSE, col.names = TRUE)
+```
+
+```{r BW, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+
+dtRSBOHFIELDS <- fGetEXPTable(pTable = "RSBOHFIELDS", 
+                              pSystID = "BP1",
+                              pClient = 300)  
+
+# infoObjects with their Attributes
+dtRSDIOBJ    <- fGetEXPTable(pTable = "RSDIOBJ", 
+                             pSystID = "BP1",
+                             pClient = 300) 
+dtRSDIOBJ    <- dtRSDIOBJ[, .(IOBJNM, IOBJTP)]
+setnames(dtRSDIOBJ, "IOBJNM", "ATTRINM")
+
+dtRSDBCHATR  <- fGetEXPTable(pTableName = "RSDBCHATR", 
+                             pSystID    = "BP1"   , pClient = "300" ) 
+
+dtRSDBCHATR[, `:=`(POSIT   = as.integer(sub(",00", "", POSIT)),
+                   F4ORDER = as.integer(sub(",00", "", F4ORDER)))]
+setkey(dtRSDBCHATR, CHABASNM, POSIT)
+
+dtATTRINM    <- merge(dtRSDIOBJ, dtRSDBCHATR, 
+                       by = "ATTRINM", all.x = TRUE)
+dtATTRINM    <- dtATTRINM[, .(CHABASNM, ATTRINM, IOBJTP, ATTRITP, ATRTIMFL )] 
+  
+dtRSDCHABAS  <- fGetEXPTable(pTableName = "RSDCHABAS", 
+                             pSystID    = "BP1"   , pClient = "300" ) 
+dtRSDCHABAS  <- dtRSDCHABAS[, .(CHABASNM, LOWERCASE, TXTTABFL, TXTTIMFL, NOLANGU, 
+                                TXTSHFL, TXTMDFL, TXTLGFL)]
+setnames(dtRSDCHABAS, "CHABASNM", "ATTRINM")
+
+dtATTRINM     <- merge(dtATTRINM, dtRSDCHABAS,
+                       by = "ATTRINM", all.x =TRUE)
+
+dtRSDIOBJT   <- fGetEXPTable(pTableName = "RSDIOBJT", 
+                             pSystID    = "BP1"   , pClient = "300" ) 
+dtRSDIOBJT   <- dtRSDIOBJT[LANGU == "E"]
+setnames(dtRSDIOBJT, "IOBJNM", "ATTRINM")
+
+dtMATERIAL_META <- merge(dtATTRINM, 
+                         dtRSDIOBJT[, .(ATTRINM, TXTSH, TXTLG)], 
+                         by = "ATTRINM")
+
+setcolorder(dtMATERIAL_META, c("CHABASNM", "ATTRINM"  , 
+                               "ATTRITP" , "IOBJTP"   ,
+                               "ATRTIMFL", "LOWERCASE", 
+                               "TXTTABFL", "TXTTIMFL" ,
+                               "NOLANGU" , 
+                               "TXTSHFL" , "TXTMDFL"  , "TXTLGFL",
+                               "TXTSH"   , "TXTLG"))
+setkey(dtMATERIAL_META, "CHABASNM", "ATTRINM")
+# Map the attributes to teh Transformation
+# ToDO build in logic for start/end routine and multiple assignments
+pTable <- "0MATERIAL"
+dtMATERIAL_META <- merge(dtMATERIAL_META[CHABASNM == pTable],
+                    fGetTRFNMAP(pTable),
+                    by = "ATTRINM", all.x = TRUE)
+
+setcolorder(dtMATERIAL_META,  c("CHABASNM", "FROM"  , "ATTRINM", 
+                                "ATTRITP" , "TRANID", "RULEID" ,
+                                "TXTSH", "TXTLG"))
+setkey(dtMATERIAL_META, CHABASNM, ATTRINM, TRANID)
+setnames(dtMATERIAL_META, "FROM", "FIELDNAME")
+
+```
+
+
+# SAP BW
+
+```{r MATERIAL, echo=FALSE, eval=TRUE, cache=FALSE, results='hide'}
+dtMATERIAL   <- fread("c:/ftp/MATERIAL.txt", sep=";", 
+                       colClasses = "character")
+
+dtMATERIAL_FLDS <- dtRSBOHFIELDS[OHDEST == "G1OHDMAT", ]
+dtMATERIAL_FLDS$POSIT <- as.numeric(gsub(pattern = ",00", 
+                                          replacement = "",
+                                          x = dtMATERIAL_FLDS$POSIT))
+dtMATERIAL_FLDS   <- dtMATERIAL_FLDS[order(POSIT)]
+names(dtMATERIAL) <- dtMATERIAL_FLDS$TEMPIOBJNM
+
+lstMATERIAL     <- fTableOverview(dtMATERIAL)
+dtMATERIAL_UCNT <- lstMATERIAL[["dtRATIO"]]
+setnames(dtMATERIAL_UCNT, 
+         c("FLDNM"  , "UCOUNT"),
+         c("ATTRINM", "BW_UCNT"))
+```
+
+# Combination
+
+```{r COMBINE}
+dtALL <- merge(dtMARA_RET, dtMATERIAL_META, by = "FIELDNAME", all.x = TRUE )
+dtALL <- merge(dtALL, dtMATERIAL_UCNT, by = "ATTRINM", all.x = TRUE )
+
+setcolorder(dtALL, c("TABNAME"  , "FIELDNAME", "UCOUNT"   , "RATIO"    ,
+                     "EXAMP"    , "TXTTAB"   , "DDTEXT"   , "REPTEXT"  ,  
+                     "SCRTEXT_S", "SCRTEXT_M", "SCRTEXT_L", "LOWERCASE",
+                     "BI"       , "TXT"      , "TYPE"     ,      
+                     "CHABASNM" , "ATTRINM"  , "ATTRITP"  , "TRANID",
+                     "RULEID"   , "TXTSH"    , "TXTLG" ))
+dtALL <- dtALL[order(UCOUNT, decreasing = TRUE)]
+write.table(dtALL, file = "0MATERIAL.csv", sep = ";", na = " ",
+            row.names = FALSE, col.names = TRUE)
+```
+
+
+```{r MVKE}
+lstMATSALES <- fTableOverview(dtMATSALES)
+View(lstMATSALES[["dtRATIO"]])
+write.table(lstMATSALES[["dtRATIO"]], file = "0MATSALES.csv", sep = ";", row.names = FALSE, col.names = TRUE)
+# View(dtMATSALES[1:pROWS, ])
+```
+

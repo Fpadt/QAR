@@ -1,0 +1,225 @@
+---
+title   : "Quality Assurance Report"
+subtitle: "Users & Authorization"
+author  : "F.J. Padt"
+date    : "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_notebook:
+    toc: yes
+  pdf_document:
+    highlight: tango
+    toc: yes
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup}
+
+# Cleanse memory
+rm(list = ls())
+gc()
+
+# Data Settings
+pXLSX    <- "Authorization" 
+pWSHT    <- TRUE
+newfiles <- TRUE
+
+# KnitR SetUp location
+KS   <- file.path("~", "RW",
+                  "QAR", "00_RProj", "00_Global", "KnitR_SetUp.R")
+
+# Load functions
+invisible(source(KS))
+
+# Constants
+# folder  <- "/bi/ib/md"          
+# lfolder <- file.path("..", folder)  # local folder
+# fsurl   <- paste0(
+#   "ftp://fs.grandvision.com/pythia/", folder)
+# userpwd <- paste("ftpbp1", params$password, sep = ":")
+
+```
+
+[R4DS](http://r4ds.had.co.nz/introduction.html)
+
+# Read Tables
+```{r Import}
+
+T1 <- Sys.time()
+
+dtUSGRP <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "USGRP",
+    pOptions = list())
+
+dtUSGRPT <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "USGRPT", 
+    pOptions = list("SPRSL = 'E'"))
+
+dtUSGRP_USER <-
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "USGRP_USER", 
+    pOptions = list())
+
+dtUSR02 <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "USR02", 
+    pOptions = list(),
+    pFields  = list(
+      'MANDT'   , 'ANAME'     , 'BNAME', 'ERDAT', 
+      'TRDAT'   , 'LTIME'     , 'GLTGV', 'GLTGB', 
+      'USTYP'   , 'CLASS'     , 'LOCNT', 'UFLAG',
+      'PWDSTATE', 'PWDINITIAL', 'PWDLOCKDATE'))
+
+dtAGR_USERS <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "AGR_USERS", 
+    pOptions = list())
+
+dtUSR21 <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "USR21", 
+    pOptions = list())
+
+dtADR6 <- 
+  fRead_and_Union(
+    pType    = "B", 
+    pTable   = "ADR6", 
+    pOptions = list())
+
+# AGR_DEFINE
+
+# 
+dtAUTH       <-
+  fRead_and_Union(
+    pSIDCLNT = c("BU1300", "BA1300", "BP1300"),
+    pTable   = "/BIC/AG1AAPD222",
+    pOptions = list(),
+    pFields  = list(
+      '/BIC/G1AAGRP', 
+      '/BIC/G1AAOBJ',
+      '/BIC/G1AAOPT', 
+      '/BIC/G1AASIGN',
+      '/BIC/G1AAVAL_H',
+      '/BIC/G1AAVAL_L', 
+      '/BIC/G1COUNT',
+      'RECORDMODE'
+    ))
+
+dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+
+write.table(
+  dtRES, file = "c:/c-temp/RES.csv",
+  sep = ";", row.names = FALSE, col.names = TRUE)
+
+dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+write.table(
+  dtRES, file = "c:/c-temp/RES.csv",
+  sep = ";", row.names = FALSE, col.names = TRUE)
+```
+
+```{r Tidy}
+
+
+
+```
+
+```{r Visualize}
+
+```
+
+
+```{r Model}
+
+```
+
+
+```{r Communicate}
+
+dtUSER_PVT <- 
+  dcast.data.table(
+    data = dtUSR02,
+    formula = BNAME 
+    + USTYP + CLASS + TRDAT + GLTGB  + UFLAG
+    ~ SYSTID,
+    fun.aggregate = length,
+    value.var = "SYSTID")                    %>%  
+  .[, Total := BS1 + BD1 + BU1 + BA1 + BP1]        %T>%
+  setcolorder(
+    c("BNAME", "USTYP", "CLASS", "TRDAT", "GLTGB", "UFLAG",
+      "BS1", "BD1", "BU1", "BA1", "BP1", "Total"))
+
+pFFN <- file.path("~", "RW", "QAR", "30_Analysis", "dtUSER_PVT.csv")
+
+write.table(
+  dtUSER_PVT,
+  file = pFFN, sep = ";", row.names = FALSE)
+shell.exec(normalizePath(pFFN))
+
+dtRES <- dtUSR02[dtAGR_USERS, on = .(SYSTID, BNAME = UNAME )]
+
+pFFN <- file.path("~", "RW", "QAR", "30_Analysis", "RES.csv")
+
+write.table(
+  dtRES,
+  file = pFFN, sep = ";", row.names = FALSE)
+shell.exec(normalizePath(pFFN))
+
+```
+
+
+  # read data from MS Access extract
+
+
+  
+# load("./11_PrepData/dtDUMMIES.RData")
+# load("~/RW/QAR/11_PrepData/dtDUMMIES.RData")
+# load("~/RW/QAR/11_PrepData/dtEMAIL.RData")
+# load("~/RW/QAR/11_PrepData/dtSAPDUMMY.RData")  
+  
+  # dtAUTH       <- fGetEXPTable(pTableName = "#BIC#AG1AAPD0200"
+  #                              , pSystID = "BP1", pClient = 300)  
+  
+  # Read data from Local Excel File, note stats need to be refreshed
+  # dtCOMM       <- as.data.table(read_excel(path = pINFO, sheet = "C.OMMENT"))
+  
+ } 
+
+```
+
+```{r}
+dtUSR <- 
+  dtUSR02[USTYP == "A", 
+          .(SYSTID, MANDT, BNAME, GLTGB, CLASS, UFLAG,
+            TRDAT, PWDSTATE, PWDINITIAL, PWDLOCKDATE )]        %T>%
+  setnames(c("GLTGB"), c("USR_GLTGB"))
+
+dtUSR_GRP <- 
+  dtUSGRP_USER[, .(SYSTID, MANDT, BNAME, USERGROUP)]
+
+dtUSR_AGR <- 
+  dtAGR_USERS[, .(SYSTID, MANDT, AGR_NAME, UNAME, TO_DAT)]     %T>%
+  setnames(c("TO_DAT"), c("AGR_TO_DAT"))
+
+dtAUTH <- 
+  dtUSR_AGR[dtUSR, on = .(SYSTID, MANDT, UNAME = BNAME)]      %>%
+  dtUSR_GRP[., on = .(SYSTID, MANDT, BNAME = UNAME), allow.cartesian = TRUE]
+
+pFFN <- normalizePath(file.path("~", "RW", "QAR", "30_Analysis", "auths.csv"))
+
+write.table(
+  dtAUTH,
+  file = pFFN, sep = ";", row.names = FALSE)
+shell.exec(pFFN)
+
+
+```
+
