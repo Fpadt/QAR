@@ -41,14 +41,6 @@ KS <-
 # Load functions
 invisible(source(KS))
 
-# FTP - Connection to GV FileServer
-# Constants
-# folder  <- "/bi/ib/md"          
-# lfolder <- file.path("..", folder)  # local folder
-# fsurl   <- paste0(
-#   "ftp://fs.grandvision.com/pythia/", folder)
-# userpwd <- paste("ftpbp1", params$password, sep = ":")
-
 ```
 
 # Data Import
@@ -61,8 +53,7 @@ dtCD_HDR <- fread(file.path("11_prep_data", "CD_HDR.csv"))
 
 # determine version of filename
 version <- 
-  paste0(format(today(), "%Y%m%d"), "_", 
-         "W", isoweek(today()))          %T>%
+  paste0(format(today(), "%Y%m%d"))          %T>%
   print(.)
 
 # Status Order
@@ -72,35 +63,6 @@ dtStatusOrder <-
     CR_STATUS = status,
     CR_ST_ORD = paste0(1:5, ": ", status))
 
-# Developers
-cDEV <- c(CD_DEVELOPER = 
-  "Floris Padt",             # COE
-  "Chris Houlder",           # SAP Indigo
-  "Pradeep",                 # AMS
-  "Darshan",                 # AMS
-  "Mohit",                   # AMS
-  "Arjun",                   # AMS  
-  "Rene van de Lei",         # EXPERTUM
-  "Dirk Kemper",             # EXPERTUM
-#  "Sander Van Willigen",    # EXPERTUM
-#  "Sjoerd Van Middelkoop",  # EXPERTUM
-  "Kasper Groen")            # GAAN
-
-# Daily Tasks
-cTASK <- c(
-  "0: Management",
-  "0: Monitoring",
-  "0: Service Requests",
-  "0: Incidents",
-  "0: House Keeping",
-  "0: Out Of Office")
-
-# Expand Daily Tasks per Developer  
-dtEXP <- 
-  expand.grid(
-    cDEV, cTASK)  %>%
-  as.data.table() %T>%
-  setnames(c("CD_DEVELOPER", "CR_URGENCY"))
 ```
 
 ```{r Import02}
@@ -109,7 +71,8 @@ dtEXP <-
 dtCR <- 
   fread(file.path(
     "10_raw_data", 
-    paste0("CR", version, ".csv")))         %>% 
+    paste0("CR", version, ".csv")),
+    colClasses = "character")                %>% 
   .[, dtCR_HDR[NEW == '', OLD] := NULL]     %T>%
   setnames(
     dtCR_HDR[NEW != '', OLD],
@@ -119,12 +82,32 @@ dtCR <-
 dtCD <- 
   fread(file.path(
     "10_raw_data", 
-    paste0("CD", version, ".csv")))         %>%
+    paste0("CD", version, ".csv")),
+    colClasses = "character")               %>%
   .[, dtCD_HDR[NEW == '', OLD] := NULL]     %T>%
   setnames(
     dtCD_HDR[NEW != '', OLD],
     dtCD_HDR[NEW != '', NEW])               %>%
   .[CD_TRAN_TYPE != "SMIM"]           
+
+dtOLD <- 
+  read_xlsx(
+    path  = file.path("Results", "PLAN_PREP_TST.xlsx"), 
+    sheet = "PLAN_PREP", 
+    col_types = "text" )                 %>%
+  as.data.table()                        %>%
+  melt.data.table(
+    id.vars = 1:12,
+    variable.name = "DAY",
+    value.name = "hrs",
+    variable.factor = F,
+    value.factor = F)                    %>%
+  .[, DAY := ymd("1899-12-30") + 
+      as.integer(DAY)]                   %>%
+  .[, PROCDATE := today()]               %>%
+  .[(TYPE == "PLN") |
+    (TYPE == "ACT" & DAY <= today())]
+  
 
 # replicon TimeSheet Overview
 # dtTSO <- 
@@ -133,10 +116,61 @@ dtCD <-
 #     sheet = "TimeSheet Overview 2017-12-11")
 
 # replicon TimeSheet Overview
+
+dtEST <- 
+  read_xlsx(
+    path  = file.path("11_prep_data", "COE_RFC_REVIEW.xlsx"), 
+    sheet = "EST",
+    col_types = "text")             %>%
+  as.data.table()
+
 dtRVW <- 
   read_xlsx(
     path  = file.path("11_prep_data", "COE_RFC_REVIEW.xlsx"), 
-    sheet = "REVIEW")
+    sheet = "REVIEW", 
+    col_types = "text" )            %>%
+  as.data.table()                   %>%
+  dtEST[, .(COST, DAYS)][., on = .(COST)]
+
+# Open Excel with New Reviews to be assigned
+dtNEW2REVIEW <- 
+  dtCR[
+    CR_STATUS %in% c("In Review") & 
+      substr(CR_CATEGORY, 1, 5) == "SAP B" &
+      !(CR_REQ_ID %in% dtRVW$CR_REQ_ID), .(CR_REQ_ID, CR_DESCR)]
+
+if (dim(dtNEW2REVIEW)[1] > 0) {
+  fOpen_in_Excel(
+    pDT = dtNEW2REVIEW, 
+    pFN = paste0("new2review", version, ".csv"))
+  } else {
+  rm(dtNEW2REVIEW)
+}
+
+dtADD <- 
+  read_xlsx(
+    path  = file.path("11_prep_data", "COE_RFC_REVIEW.xlsx"), 
+    sheet = "ADD")                                    %>%
+  as.data.table()                                     %>%
+  .[BI == "Y"]                                        %>%
+  .[, BI := NULL]                                     %>%
+  melt.data.table(
+    id.vars         = c("TEAM", "SSM_ID", "REP_ID"),
+    variable.name   = "TASK",
+    value.name      = "ADD",
+    variable.factor = FALSE)  
+
+cDEV <- unique(dtADD$SSM_ID)
+
+dtEXP <- 
+  copy(dtADD)                                         %>%
+  .[ADD == "X"]                                       %>%
+  .[, ADD := NULL]                                    %>%  
+  .[, `:=`(
+    CR_TRAN_TYPE = "ZACR",
+    REP_ID       = NULL,
+    TEAM         = NULL)] %T>%
+  setnames(c("CD_DEVELOPER", "CR_URGENCY", "CR_TRAN_TYPE"))    
 
 # TABLE <- 
 #   fRead_and_Union(
@@ -171,13 +205,42 @@ dtALL <-
     CD_LCH_ON    = dmy(.[, substr(CD_LCH_ON   , 1, 10)]))] %T>%
   setnames("CD_REQ_ID", "CR_REQ_ID")
 
-# filter on BI
-dtBI <- 
+dtREVIEW <- 
+  dtRVW[, .(CR_REQ_ID, REVIEWER)][
+    dtALL[CR_STATUS %in% c("2: In Review")], 
+    on = .(CR_REQ_ID),
+    nomatch = 0 ]                         %>%
+  .[, `:=`(CD_DEVELOPER = REVIEWER,
+           REVIEWER     = NULL)]
+
+dtCREATE_FD <- 
+  dtRVW[, .(CR_REQ_ID, FD_CREATOR)][
+    dtALL[CR_STATUS %in% c("4: Create FD")], 
+    on = .(CR_REQ_ID),
+    nomatch = 0 ]                         %>%
+  .[, `:=`(CD_DEVELOPER = FD_CREATOR,
+           FD_CREATOR     = NULL)]
+
+dtNO_DEVELOPER <- 
+  dtALL[CR_STATUS %in% c("5: Being Implemented") &
+        CD_DEVELOPER == "" & substr(CR_CATEGORY,1,5) == "SAP B"]
+
+# Filter on Developer filters also on only RFC/CD which are in Built
+dtBEING_IMPL <- 
   copy(dtALL) %>%
-  .[substr(CR_CATEGORY,1,5) == "SAP B"] %>%
+  .[CD_DEVELOPER %in% cDEV] %>%
   .[, CR_URGENCY := ifelse(
     CR_URGENCY == "", 
     "5: BackLog", CR_URGENCY)]
+
+dtBI <- 
+  rbindlist(
+    list(
+      dtREVIEW,
+      dtCREATE_FD,
+      dtBEING_IMPL,
+      dtNO_DEVELOPER))
+
 
 ```
 
@@ -194,27 +257,67 @@ setcolorder(x = dtBI, neworder = cols)
 ```
 
 
-```{r Transform02, eval=FALSE, include=FALSE}
+```{r Transform02}
 
 dtSUB <- 
   copy(dtBI) %>%
+  dtRVW[, .(CR_REQ_ID, REP_PROJECT, DAYS)][. , on = .(CR_REQ_ID)] %>%
   .[, .(
-    CR_TRAN_TYPE , CR_URGENCY  , CR_SOL_PARTY,
-    CR_REQ_ID    , CR_DESCR    , CR_STATUS, CR_CR_ON,     
-    CD_ID        , CD_DESCR    , CD_STATUS, CD_CR_ON, 
-    CR_SUP_TEAM  , CD_DEVELOPER, CD_TESTER, CR_CUR_PROCESSOR, 
-    CD_COE_EXP)] %T>%
+    CR_TRAN_TYPE , CR_URGENCY  , 
+    CR_REQ_ID    , CD_ID       ,
+    CR_DUE_BY    ,
+    CR_DESCR     , CD_DESCR    , 
+    CD_STATUS    , CR_STATUS ,   
+    CR_SUP_TEAM  , CD_DEVELOPER, 
+    CR_SOL_PARTY , CD_TESTER,
+    REP_PROJECT  , DAYS)] %T>%
   setorder(-CR_TRAN_TYPE, CR_STATUS, CR_URGENCY, CR_REQ_ID, CD_ID )
 
-dtADD <- 
-  copy(dtSUB)[0] %>%
-  .[dtEXP, on = .(CR_URGENCY, CD_DEVELOPER)]
+# Add General task which need time writing
+# Add Type: PLN/ACT
+dtTASK <- 
+  copy(dtSUB)[0]                     %>%
+  .[dtEXP, 
+    on = .(CR_TRAN_TYPE,
+           CR_URGENCY, 
+           CD_DEVELOPER)]            %>%
+  list(dtSUB)                        %>%
+  rbindlist()                       %T>%
+  setkey(CR_URGENCY, CR_STATUS)
 
-dtPLAN <- 
-  list(dtSUB, dtADD) %>%
-  rbindlist()
+dtRC_DATES <- 
+  CJ(
+    unique(dtTASK$CR_REQ_ID), 
+    seq.Date(
+      from = today(), 
+      to   = today() + 100,  
+      by   = "day"))                %T>%
+  setnames(c("CR_REQ_ID", "DATE"))   %>%
+  .[, VAR := 0]                      %>%
+  dcast.data.table(
+    CR_REQ_ID ~ DATE,
+    value.var = "VAR")               %>%
+  dtTASK[, .(CR_REQ_ID, CD_ID)][
+    ., on = .(CR_REQ_ID)]           %T>%
+  setkey(CR_REQ_ID, CD_ID)           
 
-setkey(dtPLAN, CR_URGENCY, CR_STATUS)
+dtTASKDATE <- 
+  list(
+    copy(dtTASK)[, TYPE := "PLN"],
+    copy(dtTASK)[, TYPE := "ACT"])   %>%
+  rbindlist()                        %>%
+  .[dtRC_DATES, on = .(CR_REQ_ID, 
+                       CD_ID) ]     %T>%
+  setorder(
+    -CR_TRAN_TYPE, CR_STATUS, 
+    CR_URGENCY, 
+    CR_REQ_ID, CD_ID, TYPE )
+
+for (j in seq_len(ncol(dtTASKDATE))) {
+  set(dtTASKDATE,
+      which(is.na(dtTASKDATE[[j]])), j, 
+      as.character("-"))}
+
 ```
 
 # Visualize
@@ -232,11 +335,35 @@ setkey(dtPLAN, CR_URGENCY, CR_STATUS)
 # Communicate
 
 ```{r Communicate}
-fOpen_in_Excel(pDT = dtALL ,  pFN = "dtALL.csv")
-fOpen_in_Excel(pDT = dtBI  ,  pFN = "dtBI.csv")
-fOpen_in_Excel(pDT = dtSUB ,  pFN = "dtSUB.csv")
-fOpen_in_Excel(pDT = dtPLAN,  pFN = "dtPLAN.csv")
+# fOpen_in_Excel(pDT = dtALL ,  pFN = "dtALL.csv")
+# fOpen_in_Excel(pDT = dtBI  ,  pFN = "dtBI.csv")
+# fOpen_in_Excel(pDT = dtSUB ,  pFN = "dtSUB.csv")
+# fOpen_in_Excel(
+#   pDT = dtTASKDATE[, setdiff(
+#     names(dtTASKDATE), c("CR_TRAN_TYPE", "CR_STATUS")),
+#     with = FALSE],
+#   pFN = paste0("PLAN_", version, ".csv"))
+# fOpen_in_Excel(
+#   pDT = dtTASKDATE,
+#   pFN = "task.csv")
+# 
+# fOpen_in_Excel(
+#   pDT = dtALL,
+#   pFN = "ALL.csv")
 
+```
+
+```{r}
+
+write.table(
+  x = dtTASKDATE[, setdiff(names(dtTASKDATE),
+                           c("CR_TRAN_TYPE", "CR_SOL_PARTY")),
+                 with = FALSE],
+  file =  paste0("Results/PLAN_PREP.csv"),
+  sep = ",", row.names = FALSE, col.names = TRUE)
+
+pathofvbscript <- "vbscript2.vbs"
+shell(shQuote(normalizePath(pathofvbscript)), "cscript", flag = "//nologo")
 ```
 
 
