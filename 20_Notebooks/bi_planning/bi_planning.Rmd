@@ -63,15 +63,26 @@ dtStatusOrder <-
     CR_STATUS = status,
     CR_ST_ORD = paste0(1:5, ": ", status))
 
+fGetLatestFile <- function(pPATTERN) {
+  ldir <-  normalizePath("./10_raw_data")
+
+    finf <- file.info(dir(
+    path = ldir, pattern = pPATTERN, 
+    full.names = TRUE), extra_cols = FALSE)
+  
+  finf$FULLNAME <- row.names(finf)
+  
+  finf <- as.data.table(finf)
+  return(finf[ mtime == max(mtime), FULLNAME])
+}
+
 ```
 
 ```{r Import02}
 
 # read change requests
 dtCR <- 
-  fread(file.path(
-    "10_raw_data", 
-    paste0("CR", version, ".csv")),
+  fread(fGetLatestFile(pPATTERN = "CR"),
     colClasses = "character")                %>% 
   .[, dtCR_HDR[NEW == '', OLD] := NULL]     %T>%
   setnames(
@@ -80,9 +91,7 @@ dtCR <-
 
 # read cds
 dtCD <- 
-  fread(file.path(
-    "10_raw_data", 
-    paste0("CD", version, ".csv")),
+  fread(fGetLatestFile(pPATTERN = "CD"),
     colClasses = "character")               %>%
   .[, dtCD_HDR[NEW == '', OLD] := NULL]     %T>%
   setnames(

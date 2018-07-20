@@ -81,19 +81,23 @@ ZFIAR_CC <-
 GL_ACCOUNT <- 
   fRead_and_Union(
     pSIDCLNT = c("BP1300"), 
-    pTable = "/BI0/PGL_ACCOUNT",
-    pOptions = list("CHRT_ACCTS = 'GV00'")) %T>%
+    pTable = "/BI0/PGL_ACCOUNT") %T>%
   setnames(gsub("/BIC/", "", names(.))) 
 
 SKA1 <- 
     fRead_and_Union(
     pSIDCLNT = c("RP1300"), 
     pTable   = "SKA1",
-    pOptions = list("KTOPL = 'GV00'"),
-    pFields  = list("KTOPL", "SAKNR", "BILKT", "GVTYP", "VBUND", "XBILK"    , "SAKAN", "ERDAT", "ERNAM", 
+#    pOptions = list("KTOPL = 'GV00'"),
+    pFields  = list("KTOPL", "SAKNR", "BILKT", "GVTYP", 
+                    "VBUND", "XBILK"    , "SAKAN", "ERDAT", "ERNAM", 
                     "KTOKS", "XLOEV", "XSPEA", "XSPEB", "FUNC_AREA", "MUSTR")) %>%
   .[, `:=`( SYSTID = NULL, CLIENT = NULL)]
      
+fOpen_in_Excel(
+  pDT = SKA1[GL_ACCOUNT, on = .(SAKNR = GL_ACCOUNT, KTOPL = CHRT_ACCTS)][is.na(SAKAN)],
+  pFN = "GL_missig.csv"
+)
 
 ```
 
